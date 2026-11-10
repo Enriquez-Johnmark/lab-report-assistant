@@ -2,7 +2,7 @@
 
 An AI assistant that turns a patient's lab results into a plain-language report a physician approves. Claude drafts it; code checks every number, unit and range against the lab data and refuses anything that reads as a diagnosis; the approved text is delivered once; every step is in an append-only audit log.
 
-**Status:** M4 of six done, 36 of 38 acceptance criteria proven ([M4's evidence page](docs/evidence/m4.html)).
+**Status:** M5 of six done, all 38 acceptance criteria proven ([M5's evidence page](docs/evidence/m5.html)).
 
 - **M1:** made-up lab data, strict FHIR import scoped to each clinic, and the evidence pack, which links each criterion to its passing tests.
 - **M2:** Claude drafts each imported report in a background job. The model sees only the results and writes no numbers; code blocks any draft that misses a result, invents one, contains a number, puts a value on the wrong side of the lab's range, or uses diagnosis, treatment or medication wording. Claude's answers are recorded, so the tests need no API key.
@@ -10,7 +10,16 @@ An AI assistant that turns a patient's lab results into a plain-language report 
 
 - **M4:** an approval queues a notice holding no health information, only a signed link valid 30 days; it is sent once, even across a crash, and only while the approved text still stands. The patient presses "Show my report" to see the approved text beside the lab's values, with who approved it and how it was made; each opening is logged, and the Sent page shows it.
 
-Measuring Claude on all 30 reports comes next (`ROADMAP.md`).
+- **M5:** Claude's drafts of all 30 demo reports, recorded and put through the checks ([the report](evalset/report.md)):
+
+  | Model | Drafts that pass every check | Cost per report |
+  |---|---|---|
+  | Claude Sonnet (the default) | 27 of 30 (90%) | US$0.0085 |
+  | Claude Haiku | 16 of 30 (53%) | US$0.0004 |
+
+  Haiku mostly fails by repeating test names that contain digits ("Free T4"). Of Sonnet's three failed drafts, two were blocked by the checks being cautious ("normal muscle activity" read as a placement; "not bound to proteins" read as a negation) and one for naming "ovarian reserve". Every miss blocked a good draft; none let a bad one through. The checks weren't tuned on these 30 reports, so the numbers stay honest.
+
+The showcase comes next (`ROADMAP.md`).
 
 ## Try it
 

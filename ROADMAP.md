@@ -4,7 +4,7 @@ Where Lab Report Assistant stands and what comes next, in one page. The mileston
 
 ## Where we are
 
-**Four of six milestones done; 36 of 38 acceptance criteria proven** by passing tests. Each milestone's evidence page is in `docs/evidence/`.
+**Five of six milestones done; all 38 acceptance criteria proven** by passing tests. Each milestone's evidence page is in `docs/evidence/`.
 
 | Milestone | Delivers | Criteria | Status |
 | --- | --- | --- | --- |
@@ -12,8 +12,8 @@ Where Lab Report Assistant stands and what comes next, in one page. The mileston
 | M2 | Claude's drafts and the checks on them, recorded answers, the 40 bad drafts | A2, B1–B7, F3, G1, G4 | Done (2026-11-10), code-reviewed |
 | M3 | Logins, the physician's review, the audit log, the React pages, browser tests | B8, C1–C7, E1–E3, F1, F4 | Done (2026-11-10), code-reviewed |
 | M4 | Delivery: the approved report goes out once as a notice with a signed link; the patient's page shows it and logs each opening | D1–D6 | Done (2026-11-10), code-reviewed |
-| M5 | Measurement: Claude's drafts of all 30 reports recorded, Sonnet against Haiku | G2, G3 | Next |
-| M6 | Showcase: README results, screenshots, walkthrough video, portfolio page | — | To do |
+| M5 | Measurement: Claude's drafts of all 30 reports recorded, Sonnet against Haiku | G2, G3 | Done (2026-11-10), code-reviewed |
+| M6 | Showcase: README results, screenshots, walkthrough video, portfolio page | — | Next |
 
 Each milestone ends with a code review, with its findings fixed.
 
@@ -31,7 +31,7 @@ The first of four healthcare projects, each in its own repository, built one at 
 ## What needs the owner
 
 - **Any time:** try it as the README's "Try it" says: load the demo data as the administrator, then review the drafts as the physician.
-- **After changing the prompt:** `cargo run -- work --record` with the key records Claude's new answers; commit `evalset/recorded/`.
+- **After changing the prompt or the demo data:** `cargo run -- eval --record` with the key asks Claude only for what changed, removes recordings nothing uses, and rewrites `evalset/report.md`; commit both. CI checks them without a key (G2, G3).
 - **A new repository** for each of projects 2 to 4, when its turn comes.
 
 ## Limits that never move
