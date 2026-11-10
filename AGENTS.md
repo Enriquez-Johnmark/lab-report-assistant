@@ -13,10 +13,10 @@ Each gate needs the owner's explicit "yes"; an approval for one phase never carr
 | 1. Research | done (`docs/research/README.md`) |
 | 2. Brief | done, approved 2026-11-10 (`docs/product/brief.md`) |
 | 3. Spec & acceptance criteria | done, approved 2026-11-10 (`docs/product/spec.md`, 38 criteria) |
-| 4. Architecture | **in progress** (`docs/architecture.md`) |
-| 5. Build | not started |
+| 4. Architecture | done, approved 2026-11-10 (`docs/architecture.md`) |
+| 5. Build | not started: waits for the owner's yes |
 
-No application code is written until the spec and architecture are approved.
+Code follows the build order in `docs/architecture.md`, one milestone at a time, once the owner says yes to the build.
 
 ## Owner decisions
 
