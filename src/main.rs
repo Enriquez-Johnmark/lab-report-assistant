@@ -10,7 +10,8 @@ use lab_report_assistant::engine::clock::SystemClock;
 use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
-                     import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE]";
+                     import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
+                     work [--record | --recorded]";
 
 fn main() -> ExitCode {
     let result = tokio::runtime::Builder::new_multi_thread()
@@ -50,6 +51,7 @@ async fn run() -> anyhow::Result<()> {
         }
         Some("import") => import(&args).await,
         Some("evidence") => evidence(&args),
+        Some("work") => work(&args).await,
         _ => anyhow::bail!(USAGE),
     }
 }
@@ -139,5 +141,55 @@ fn evidence(args: &[String]) -> anyhow::Result<()> {
     println!("wrote {}", out.display());
     let gaps = evidence.gaps();
     anyhow::ensure!(gaps.is_empty(), "{} gap(s):\n{}", gaps.len(), gaps.join("\n"));
+    Ok(())
+}
+
+/// The model that words the drafts (`LLM_MODEL`); Sonnet unless set.
+fn drafting_model() -> String {
+    std::env::var("LLM_MODEL").unwrap_or_else(|_| "claude-sonnet-5-5".to_owned())
+}
+
+/// The owner's API key: `ANTHROPIC_API_KEY`, or in a cloud session
+/// `OWNER_ANTHROPIC_API_KEY` (Claude Code itself reads the first).
+fn api_key() -> Option<String> {
+    ["ANTHROPIC_API_KEY", "OWNER_ANTHROPIC_API_KEY"]
+        .iter()
+        .find_map(|name| std::env::var(name).ok().filter(|key| !key.trim().is_empty()))
+}
+
+/// Runs every due drafting job once. With `--record` each model answer is
+/// also saved to `evalset/recorded/` (made-up data only); with `--recorded`
+/// the saved answers are replayed and no model is called. With no key and
+/// neither flag, the template drafts.
+async fn work(args: &[String]) -> anyhow::Result<()> {
+    use lab_report_assistant::drafts::{Drafter, work};
+    use lab_report_assistant::engine::llm::AnthropicClient;
+    use lab_report_assistant::model::{DIR, Recorded, Recording};
+
+    let pool = connect().await?;
+    let clock: Arc<dyn lab_report_assistant::engine::clock::Clock> = Arc::new(SystemClock);
+    let jobs = lab_report_assistant::engine::jobs::Jobs::new(pool.clone(), clock.clone());
+    let dir = std::path::Path::new(DIR);
+    let flag = |name: &str| args.iter().any(|arg| arg == name);
+    let live = || -> anyhow::Result<Option<AnthropicClient>> {
+        let Some(key) = api_key() else { return Ok(None) };
+        let base = std::env::var("ANTHROPIC_BASE_URL").unwrap_or_else(|_| "https://api.anthropic.com".to_owned());
+        let client = AnthropicClient::new(&base, key.into(), &drafting_model(), std::time::Duration::from_secs(90))
+            .context("setting up the model client")?;
+        Ok(Some(client))
+    };
+    let ran = if flag("--recorded") {
+        work(
+            &jobs,
+            &Drafter::new(pool, clock, Some(Recorded::new(&drafting_model(), dir))),
+        )
+        .await?
+    } else if flag("--record") {
+        let client = live()?.context("--record needs the owner's API key")?;
+        work(&jobs, &Drafter::new(pool, clock, Some(Recording::new(client, dir)))).await?
+    } else {
+        work(&jobs, &Drafter::new(pool, clock, live()?)).await?
+    };
+    println!("ran {ran} drafting job(s)");
     Ok(())
 }
