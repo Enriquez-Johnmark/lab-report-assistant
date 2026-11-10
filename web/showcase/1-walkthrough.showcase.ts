@@ -1,27 +1,41 @@
 import { expect, test } from "@playwright/test"
 
 import { linkIn, logIn } from "../e2e/support.ts"
-import { addOverlay, OUT, PHYSICIAN, pointAt, press, record, say } from "./support.ts"
+import { addOverlay, ADMIN, OUT, PHYSICIAN, pointAt, press, record, say } from "./support.ts"
 
 const size = { width: 1280, height: 720 }
 
-/** About two and a half minutes through a physician's review, with
- *  captions; saved as docs/showcase/walkthrough.mp4. Runs after the
- *  screenshots, on the same made-up clinic. */
+/** About two and a half minutes from an empty clinic to a patient reading
+ *  their report, with captions; saved as docs/showcase/walkthrough.mp4. Runs
+ *  first, on a fresh clinic; the screenshots follow on the same data. */
 test("walkthrough", async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: size })
   const page = await context.newPage()
-  await logIn(page, PHYSICIAN)
+  await logIn(page, ADMIN)
   await addOverlay(page)
   const stop = await record(page, testInfo.outputPath("frames"))
 
+  // Where the data comes from.
   await page.goto("/")
   await page.getByRole("heading", { name: "Lab reports" }).waitFor()
-  await say(page, "Lab Report Assistant: a made-up women's health clinic, with made-up patients.")
+  await say(page, "Lab Report Assistant, at a made-up women's health clinic with made-up patients.")
   await say(
     page,
-    "Each lab report arrives as FHIR data. Claude has drafted a plain-language explanation of each."
+    "Lab results arrive as FHIR files, the healthcare data standard: here 30 made-up reports from a made-up lab."
   )
+  await press(page, page.getByRole("button", { name: "Load the demo data" }).first())
+  await expect(page.getByRole("row")).toHaveCount(31)
+  await say(
+    page,
+    "Each file is checked strictly on import; a broken one is refused with the reason."
+  )
+  await say(page, "Claude drafts a plain-language explanation of each, in the background.")
+  await expect(page.getByText("Drafting")).toHaveCount(0, { timeout: 90_000 })
+
+  // The physician's queue.
+  await say(page, "The physician logs in with an emailed link.", 3000)
+  await context.clearCookies()
+  await logIn(page, PHYSICIAN)
   await pointAt(page, page.getByText("Blocked by a check").first())
   await say(page, "Drafts that passed every check come first; blocked ones say why.")
 
@@ -36,6 +50,10 @@ test("walkthrough", async ({ browser }, testInfo) => {
     page,
     "The values come straight from the lab data. Claude only writes the words beside them."
   )
+  await press(page, page.getByRole("button", { name: "Show the file" }))
+  await page.getByText('"resourceType": "DiagnosticReport"').waitFor()
+  await say(page, "The lab's own FHIR file is right here: every value in the table comes from it.")
+  await page.mouse.wheel(0, -2000)
   await pointAt(page, page.getByRole("cell").filter({ hasText: "lab's range" }).first())
   await say(
     page,

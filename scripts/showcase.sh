@@ -10,7 +10,7 @@ db=lab_reports_showcase
 export DATABASE_URL="postgres://lab_reports:lab_reports@localhost:5432/$db"
 export MASTER_KEY="${MASTER_KEY:-0000000000000000000000000000000000000000000000000000000000000001}"
 bin=target/debug/lab-report-assistant
-cargo build --quiet
+SQLX_OFFLINE=true cargo build --quiet
 psql_admin() { docker compose exec -T postgres psql -q -U lab_reports -d postgres -c "$1"; }
 psql_admin "drop database if exists $db"
 psql_admin "create database $db"

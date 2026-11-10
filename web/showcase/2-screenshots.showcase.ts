@@ -20,7 +20,8 @@ test("screenshots", async ({ browser }) => {
   await logIn(admin, ADMIN)
   const load = admin.getByRole("button", { name: "Load the demo data" })
   if (await load.isVisible()) await load.click()
-  await expect(admin.getByRole("row")).toHaveCount(31)
+  // The walkthrough may already have loaded it, and sent one report.
+  await expect(admin.getByRole("row").nth(1)).toBeVisible()
   // Every report is drafted within a round or two of the worker.
   await expect(admin.getByText("Drafting")).toHaveCount(0, { timeout: 90_000 })
 
@@ -37,6 +38,10 @@ test("screenshots", async ({ browser }) => {
     .click()
   await expect(page.getByRole("button", { name: "Approve this text" })).toBeVisible()
   await shot(page, "desktop-2-review")
+  await page.getByRole("button", { name: "Show the file" }).click()
+  await expect(page.getByText('"resourceType": "DiagnosticReport"')).toBeVisible()
+  await page.getByText("Lab data (FHIR R4)").scrollIntoViewIfNeeded()
+  await page.screenshot({ path: `${OUT}/desktop-10-fhir-source.png` })
   const patient = (await page.getByRole("heading", { level: 1 }).textContent()) ?? ""
 
   // The physician approves; the server emails the notice.
@@ -74,7 +79,7 @@ test("screenshots", async ({ browser }) => {
   await shot(page, "desktop-7-edit")
 
   await page.goto("/sent")
-  await expect(page.getByText("Opened by the patient")).toBeVisible()
+  await expect(page.getByText("Opened by the patient").first()).toBeVisible()
   await shot(page, "desktop-8-sent")
 
   await admin.goto("/activity")
