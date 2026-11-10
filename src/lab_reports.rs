@@ -105,11 +105,14 @@ fn flag_text(flag: Flag) -> &'static str {
     }
 }
 
-fn flag_of(text: &str) -> Flag {
+/// The stored flag. Anything else is an error, never "normal": a high or low
+/// result must not read as within range.
+fn flag_of(text: &str) -> Result<Flag, sqlx::Error> {
     match text {
-        "low" => Flag::Low,
-        "high" => Flag::High,
-        _ => Flag::Normal,
+        "low" => Ok(Flag::Low),
+        "normal" => Ok(Flag::Normal),
+        "high" => Ok(Flag::High),
+        other => Err(sqlx::Error::Decode(format!("unknown flag {other:?}").into())),
     }
 }
 
@@ -246,16 +249,18 @@ impl LabReports {
         .fetch_all(&self.pool)
         .await?
         .into_iter()
-        .map(|row| StoredResult {
-            code: row.code,
-            name: row.name,
-            value: row.value,
-            unit: row.unit,
-            low: row.range_low,
-            high: row.range_high,
-            flag: flag_of(&row.flag),
+        .map(|row| {
+            Ok(StoredResult {
+                flag: flag_of(&row.flag)?,
+                code: row.code,
+                name: row.name,
+                value: row.value,
+                unit: row.unit,
+                low: row.range_low,
+                high: row.range_high,
+            })
         })
-        .collect();
+        .collect::<Result<_, sqlx::Error>>()?;
         Ok(StoredLabReport {
             id,
             name: report.name,
@@ -263,5 +268,16 @@ impl LabReports {
             imported_at: report.imported_at,
             results,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn f2_an_unknown_stored_flag_is_an_error_not_normal() {
+        assert!(flag_of("HIGH").is_err());
+        assert_eq!(flag_of("high").ok(), Some(Flag::High));
     }
 }
