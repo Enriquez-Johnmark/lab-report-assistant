@@ -214,3 +214,27 @@ async fn d6_a_physicians_text_is_shown_as_text_never_as_markup(pool: PgPool) {
     assert!(page.contains("&lt;script&gt;alert(1)&lt;/script&gt;"), "{page}");
     assert!(!page.contains("<script>"));
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d5_the_list_shows_a_sent_report_and_whether_the_patient_opened_it(pool: PgPool) {
+    let s = setup(pool).await;
+    let (report, link) = s.approve(0).await;
+    let id = report["id"].as_str().unwrap();
+    let status_of = |body: &serde_json::Value| {
+        body.as_array().unwrap().iter().find(|r| r["id"] == id).unwrap()["status"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    sqlx::query("update outbox_messages set status = 'sent', sent_at = now() where subject like '%lab report%'")
+        .execute(&s.pool)
+        .await
+        .unwrap();
+    let sent = call(&s.app, "GET", "/api/lab-reports", None, Some(&s.doctor)).await;
+
+    s.open(&link).await;
+    let opened = call(&s.app, "GET", "/api/lab-reports", None, Some(&s.doctor)).await;
+
+    assert_eq!(status_of(&sent.body), "sent");
+    assert_eq!(status_of(&opened.body), "opened");
+}

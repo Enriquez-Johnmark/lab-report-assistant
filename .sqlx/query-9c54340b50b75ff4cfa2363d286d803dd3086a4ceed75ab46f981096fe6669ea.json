@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select m.status,\n                  exists (select 1 from audit_events e where e.tenant_id = v.tenant_id and e.subject_id = v.lab_report_id\n                          and e.action = 'lab_report.opened' and e.details ->> 'delivery_id' = v.id::text) as \"opened!\"\n           from deliveries v join outbox_messages m on m.tenant_id = v.tenant_id and m.id = v.message_id\n           where v.tenant_id = $1 and v.lab_report_id = $2\n           order by v.created_at desc limit 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "outbox_messages",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "opened!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "9c54340b50b75ff4cfa2363d286d803dd3086a4ceed75ab46f981096fe6669ea"
+}

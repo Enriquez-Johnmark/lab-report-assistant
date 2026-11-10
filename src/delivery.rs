@@ -148,3 +148,32 @@ pub async fn approve_waiting_notices(
     }
     Ok(approved)
 }
+
+/// Where a report's latest delivery stands, as the physician sees it:
+/// `opened` once the patient opened the page, `sent` once the notice went
+/// out, `not_sent` if it was blocked or its sending is unknown, else
+/// `queued`; `None` if it was never delivered.
+pub async fn delivery_state(
+    pool: &sqlx::PgPool,
+    clinic: crate::lab_reports::ClinicId,
+    report: crate::lab_reports::LabReportId,
+) -> Result<Option<&'static str>, sqlx::Error> {
+    let row = sqlx::query!(
+        r#"select m.status,
+                  exists (select 1 from audit_events e where e.tenant_id = v.tenant_id and e.subject_id = v.lab_report_id
+                          and e.action = 'lab_report.opened' and e.details ->> 'delivery_id' = v.id::text) as "opened!"
+           from deliveries v join outbox_messages m on m.tenant_id = v.tenant_id and m.id = v.message_id
+           where v.tenant_id = $1 and v.lab_report_id = $2
+           order by v.created_at desc limit 1"#,
+        clinic.as_uuid(),
+        report.as_uuid(),
+    )
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|row| match (row.opened, row.status.as_str()) {
+        (true, _) => "opened",
+        (_, "sent") => "sent",
+        (_, "blocked" | "unconfirmed" | "expired" | "cancelled") => "not_sent",
+        _ => "queued",
+    }))
+}

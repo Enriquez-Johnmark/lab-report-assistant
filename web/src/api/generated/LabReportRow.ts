@@ -17,7 +17,9 @@ name: string,
  */
 patient_name: string, 
 /**
- * `drafting`, `waiting` (passed its checks), `blocked` or `approved`.
+ * `drafting`, `waiting` (passed its checks), `blocked`, or once approved
+ * `approved` (no email to send to), `queued`, `sent`, `not_sent` or
+ * `opened`.
  */
 status: string, 
 /**

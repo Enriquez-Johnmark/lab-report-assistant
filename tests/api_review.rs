@@ -105,8 +105,12 @@ async fn c1_the_physician_approves_through_the_api_and_the_administrator_cannot(
         .iter()
         .map(|r| r["status"].as_str().unwrap())
         .collect();
-    assert_eq!(statuses.iter().filter(|s| **s == "approved").count(), 1);
-    assert_eq!(statuses.last(), Some(&"approved"), "approved reports come last");
+    assert_eq!(
+        statuses.iter().filter(|s| **s == "queued").count(),
+        1,
+        "approved, its notice waiting to go out"
+    );
+    assert_eq!(statuses.last(), Some(&"queued"), "approved reports come last");
 }
 
 #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]

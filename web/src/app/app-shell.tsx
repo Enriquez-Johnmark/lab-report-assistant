@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query"
-import { FileTextIcon, HistoryIcon, LogOutIcon, type LucideIcon } from "lucide-react"
+import { FileTextIcon, HistoryIcon, LogOutIcon, SendIcon, type LucideIcon } from "lucide-react"
 import { Navigate, NavLink, Outlet, useLocation } from "react-router"
 
 import { api, ApiError } from "@/api/client"
@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 type NavItem = { to: string; label: string; icon: LucideIcon }
 
 const reports: NavItem = { to: "/", label: "Lab reports", icon: FileTextIcon }
+const sent: NavItem = { to: "/sent", label: "Sent", icon: SendIcon }
 const activity: NavItem = { to: "/activity", label: "Activity", icon: HistoryIcon }
 
 /** The logged-in frame: navigation beside (or, on a phone, above) the page. */
@@ -44,6 +45,7 @@ export function AppShell() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <NavMenuItem item={reports} />
+                <NavMenuItem item={sent} />
                 {me.data?.role === "administrator" ? <NavMenuItem item={activity} /> : null}
               </SidebarMenu>
             </SidebarGroupContent>

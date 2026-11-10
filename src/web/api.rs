@@ -295,7 +295,9 @@ pub struct LabReportRow {
     pub name: String,
     /// The patient's name.
     pub patient_name: String,
-    /// `drafting`, `waiting` (passed its checks), `blocked` or `approved`.
+    /// `drafting`, `waiting` (passed its checks), `blocked`, or once approved
+    /// `approved` (no email to send to), `queued`, `sent`, `not_sent` or
+    /// `opened`.
     pub status: &'static str,
     /// When it was imported.
     pub imported_at: String,
@@ -314,8 +316,15 @@ async fn list(
             .await
             .map_err(ApiError::internal)?;
         let approved = state.reviews.current_approval(clinic, report.id).await?.is_some();
+        let delivered = if approved {
+            crate::delivery::delivery_state(&state.pool, clinic, report.id)
+                .await
+                .map_err(ApiError::internal)?
+        } else {
+            None
+        };
         let status = match (&draft, approved) {
-            (_, true) => "approved",
+            (_, true) => delivered.unwrap_or("approved"),
             (None, _) => "drafting",
             (Some(draft), _) if draft.rejected => "drafting",
             (Some(draft), _) if draft.blocked => "blocked",
@@ -331,9 +340,11 @@ async fn list(
     }
     // Passed drafts first, then blocked ones, then the rest (Round 2).
     let order = |status: &str| {
-        ["waiting", "blocked", "drafting", "approved"]
-            .iter()
-            .position(|s| *s == status)
+        [
+            "waiting", "blocked", "drafting", "not_sent", "approved", "queued", "sent", "opened",
+        ]
+        .iter()
+        .position(|s| *s == status)
     };
     rows.sort_by_key(|row| order(row.status));
     Ok(Json(rows))
@@ -540,6 +551,8 @@ async fn approve(
         .reviews
         .approve(&member, id, draft.into(), &request.content_hash)
         .await?;
+    // The notice goes out now rather than at the sender's next round.
+    state.wake_sender.notify_one();
     Ok(StatusCode::NO_CONTENT)
 }
 

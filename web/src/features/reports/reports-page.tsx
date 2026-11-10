@@ -1,5 +1,5 @@
 import { DatabaseIcon } from "lucide-react"
-import { Link } from "react-router"
+import { Link, useLocation } from "react-router"
 
 import { useMe } from "@/app/queries"
 import { PageHeader } from "@/components/page-header"
@@ -25,13 +25,17 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatDateTime } from "@/lib/dates"
-import { statusLabel } from "@/lib/labels"
+import { sentStatuses, statusLabel } from "@/lib/labels"
 import { useLoadDemoData, useReports } from "@/features/reports/queries"
 
 /** The clinic's lab reports: ready to review first, then blocked ones,
  *  those still drafting, and approved ones last (the API's order). */
 export function ReportsPage() {
+  const isSentView = useLocation().pathname === "/sent"
   const reports = useReports()
+  const shown = reports.data?.filter(
+    (report) => sentStatuses.includes(report.status) === isSentView
+  )
   const me = useMe()
   const demo = useLoadDemoData()
   const loadDemo = (
@@ -48,11 +52,13 @@ export function ReportsPage() {
   return (
     <>
       <PageHeader
-        title="Lab reports"
+        title={isSentView ? "Sent" : "Lab reports"}
         description={
-          me.data?.role === "physician"
-            ? "Review each draft beside the lab's results, then approve it, edit it or ask for a new one."
-            : "Each lab report, its draft and where it stands. Only a physician can approve."
+          isSentView
+            ? "Approved reports: whether each notice went out and whether the patient opened it."
+            : me.data?.role === "physician"
+              ? "Review each draft beside the lab's results, then approve it, edit it or ask for a new one."
+              : "Each lab report, its draft and where it stands. Only a physician can approve."
         }
       >
         {reports.data?.length && me.data?.role === "administrator" ? loadDemo : null}
@@ -67,7 +73,7 @@ export function ReportsPage() {
         <Skeleton className="h-64 w-full" />
       ) : reports.isError ? (
         <QueryError error={reports.error} />
-      ) : reports.data.length === 0 ? (
+      ) : reports.data.length === 0 && !isSentView ? (
         <Empty>
           <EmptyHeader>
             <EmptyTitle>No lab reports yet</EmptyTitle>
@@ -89,7 +95,7 @@ export function ReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {reports.data.map((report) => {
+            {(shown ?? []).map((report) => {
               const status = statusLabel(report.status)
               return (
                 <TableRow key={report.id}>

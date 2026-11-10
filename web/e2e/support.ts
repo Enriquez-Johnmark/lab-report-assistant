@@ -5,20 +5,25 @@ const mailpit = process.env.MAILPIT_URL ?? "http://127.0.0.1:8025"
 type MailpitList = { messages: { ID: string; To: { Address: string }[] }[] }
 
 /** The login link in the newest email to `email`, from Mailpit. */
-async function loginLink(email: string): Promise<string> {
-  for (let attempt = 0; attempt < 60; attempt++) {
+function loginLink(email: string): Promise<string> {
+  return linkIn(email, "/login/")
+}
+
+/** The link containing `part` in the newest email to `email`, from Mailpit. */
+export async function linkIn(email: string, part: string): Promise<string> {
+  for (let attempt = 0; attempt < 120; attempt++) {
     const list = (await (await fetch(`${mailpit}/api/v1/messages`)).json()) as MailpitList
     const message = list.messages.find((m) => m.To[0]?.Address === email)
     if (message) {
       const full = (await (await fetch(`${mailpit}/api/v1/message/${message.ID}`)).json()) as {
         Text: string
       }
-      const link = full.Text.split(/\s+/).find((word) => word.includes("/login/"))
+      const link = full.Text.split(/\s+/).find((word) => word.includes(part))
       if (link) return link
     }
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
-  throw new Error(`no login email for ${email}`)
+  throw new Error(`no email with ${part} for ${email}`)
 }
 
 /** Logs in as `email` through the login page and the emailed link. */

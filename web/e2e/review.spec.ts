@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { logIn } from "./support.ts"
+import { linkIn, logIn } from "./support.ts"
 
 const admin = process.env.E2E_ADMIN ?? "admin@example.test"
 const physician = process.env.E2E_PHYSICIAN ?? "dr.example@example.test"
@@ -16,7 +16,7 @@ test("the administrator loads the demo data once", async ({ page }) => {
   await expect(page.getByRole("row")).toHaveCount(31)
 })
 
-test("the physician approves a draft and an edit that leaves out a result is blocked", async ({
+test("the physician approves a draft, the patient opens it, and an edit that leaves out a result is blocked", async ({
   page,
 }) => {
   await logIn(page, physician)
@@ -25,8 +25,21 @@ test("the physician approves a draft and an edit that leaves out a result is blo
   const ready = page.getByRole("row").filter({ hasText: "Ready to review" })
 
   await ready.first().getByRole("link").click()
+  await expect(page.getByRole("button", { name: "Approve this text" })).toBeVisible()
+  const patient = (await page.getByRole("heading", { level: 1 }).textContent()) ?? ""
   await page.getByRole("button", { name: "Approve this text" }).click()
   await expect(page.getByText("This exact text was approved on")).toBeVisible()
+
+  // The patient opens the report from the notice the server sent.
+  const [given, family] = patient.toLowerCase().split(" ")
+  const link = await linkIn(`${given}.${family}@example.test`, "/r/")
+  await page.goto(new URL(link).pathname)
+  await expect(page.getByText("Made-up demo: not a real patient")).toBeVisible()
+  await expect(page.getByText(/reviewed and approved by Dr\. Example/)).toBeVisible()
+  await page.goto("/sent")
+  await expect(page.getByRole("row").filter({ hasText: patient })).toContainText(
+    "Opened by the patient"
+  )
 
   await page.goto("/")
   await ready.first().getByRole("link").click()

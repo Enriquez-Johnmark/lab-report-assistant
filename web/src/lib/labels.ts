@@ -8,8 +8,15 @@ const statuses: Record<
   waiting: { label: "Ready to review", variant: "default" },
   blocked: { label: "Blocked by a check", variant: "destructive" },
   drafting: { label: "Drafting", variant: "secondary" },
-  approved: { label: "Approved", variant: "success" },
+  approved: { label: "Approved; no email to send to", variant: "warning" },
+  queued: { label: "Approved; sending", variant: "secondary" },
+  sent: { label: "Sent", variant: "success" },
+  opened: { label: "Opened by the patient", variant: "success" },
+  not_sent: { label: "Not sent", variant: "destructive" },
 }
+
+/** Statuses of reports already approved: the "Sent" view. */
+export const sentStatuses = ["approved", "queued", "sent", "opened", "not_sent"]
 
 export function statusLabel(status: string) {
   return statuses[status] ?? { label: status, variant: "secondary" as const }
@@ -44,6 +51,9 @@ const actions: Record<string, string> = {
   "lab_report.written_by_hand": "Written by hand",
   "lab_report.rejected": "Asked for a new draft",
   "lab_report.approved": "Approved",
+  "lab_report.notice_queued": "Notice queued for the patient",
+  "lab_report.not_delivered": "Not delivered: no email address",
+  "lab_report.opened": "Opened by the patient",
 }
 
 export function actionLabel(action: string) {
