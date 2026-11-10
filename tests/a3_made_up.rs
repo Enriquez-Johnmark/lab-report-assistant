@@ -55,3 +55,39 @@ fn a3_research_notes_may_name_real_companies() {
 
     assert!(problems(root.path()).is_empty());
 }
+
+#[test]
+fn a3_a_json_file_that_cant_be_read_is_found_not_passed() {
+    let root = tempfile::tempdir().unwrap();
+    write(root.path(), "data.json", r#"{"resourceType": "Patient", "name": "#);
+
+    assert_eq!(
+        problems(root.path()),
+        ["data.json: not valid JSON, so it can't be checked"]
+    );
+}
+
+#[test]
+fn a3_ndjson_and_xml_fhir_files_are_checked_too() {
+    let root = tempfile::tempdir().unwrap();
+    let one_line = MARKED.replace('\n', "");
+    write(root.path(), "ok.ndjson", &format!("{one_line}\n{one_line}\n"));
+    write(
+        root.path(),
+        "real.ndjson",
+        &format!("{one_line}\n{{\"resourceType\": \"Patient\"}}\n"),
+    );
+    write(
+        root.path(),
+        "real.xml",
+        r#"<Patient xmlns="http://hl7.org/fhir"><id value="p1"/></Patient>"#,
+    );
+
+    assert_eq!(
+        problems(root.path()),
+        [
+            "real.ndjson: a FHIR resource not marked as made-up test data (HTEST)",
+            "real.xml: a FHIR resource not marked as made-up test data (HTEST)",
+        ]
+    );
+}

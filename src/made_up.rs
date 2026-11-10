@@ -58,10 +58,8 @@ fn visit(root: &Path, dir: &Path, found: &mut Vec<String>) {
         let Ok(text) = std::fs::read_to_string(&path) else {
             continue;
         };
-        if shown.ends_with(".json") && !marked(&text) {
-            found.push(format!(
-                "{shown}: a FHIR resource not marked as made-up test data (HTEST)"
-            ));
+        if let Some(problem) = fhir_problem(&shown, &text) {
+            found.push(format!("{shown}: {problem}"));
         }
         let lower = text.to_lowercase();
         if let Some(company) = REAL_COMPANIES.iter().find(|c| lower.contains(&c.to_lowercase())) {
@@ -70,13 +68,25 @@ fn visit(root: &Path, dir: &Path, found: &mut Vec<String>) {
     }
 }
 
-/// Whether every FHIR resource in a JSON file carries the `HTEST` label. A
-/// JSON file that holds no FHIR resource passes.
-fn marked(text: &str) -> bool {
-    let Ok(json) = serde_json::from_str::<serde_json::Value>(text) else {
-        return true;
+const UNMARKED: &str = "a FHIR resource not marked as made-up test data (HTEST)";
+
+/// What's wrong with a file that may hold FHIR resources: JSON, NDJSON (one
+/// resource per line) or XML in the FHIR namespace. Each resource must carry
+/// the `HTEST` label; a file that can't be read can't be checked.
+fn fhir_problem(path: &str, text: &str) -> Option<&'static str> {
+    let unmarked = |json: &str| match serde_json::from_str::<serde_json::Value>(json) {
+        Ok(json) => (!every_resource_marked(&json)).then_some(UNMARKED),
+        Err(_) => Some("not valid JSON, so it can't be checked"),
     };
-    every_resource_marked(&json)
+    if path.ends_with(".json") {
+        unmarked(text)
+    } else if path.ends_with(".ndjson") {
+        text.lines().filter(|line| !line.trim().is_empty()).find_map(unmarked)
+    } else if path.ends_with(".xml") && text.contains("http://hl7.org/fhir") && !text.contains("HTEST") {
+        Some(UNMARKED)
+    } else {
+        None
+    }
 }
 
 fn every_resource_marked(value: &serde_json::Value) -> bool {
