@@ -60,6 +60,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "2ec7bec3c1ce6d2d29c77a999e9da371416c97af0fda6a0a6d30ca51a85073c1"
+    },
+    "ui-taste": {
+      "source": "uizze.sh",
+      "sourceType": "well-known",
+      "skillPath": "ui-taste/SKILL.md",
+      "computedHash": "9a37107c51b6bf6e3bdc2675d559094619b1b03092f8466c32ffc8e0cb9c1d4a"
     }
   }
 }

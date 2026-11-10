@@ -17,6 +17,7 @@ Before writing or reviewing React, read the skills in `.claude/skills/`:
 | `shadcn` | Adding, composing and styling shadcn/ui components. Skip its chat, registry, MCP and design-system files |
 | `frontend-design` | Visual direction: palette, type and layout chosen for the subject, not templated defaults; plain, specific copy. A physician's review screen is calm and clear before it is distinctive |
 | `web-design-guidelines` | Reviewing a page: accessibility, focus, forms, motion, typography and content rules, from its pinned `guidelines.md`. Its "Title Case for headings/buttons" rule doesn't apply: headings and buttons are in sentence case |
+| `ui-taste` | Audits and polish passes: read `reference/audit.md` (look only), then `reference/polish.md`, `reference/craft.md`, `reference/operate.md`, `reference/distill.md` and the web parts of `reference/anti-slop-craft.md`. Polish keeps this product's look; it never smuggles in a redesign. Skip the iOS, native and mobile playbooks, the paid Uizze MCP (`find_ui_references`, `find_ui_materials`) and the image-first step (no image tool here: work from a screenshot of the current screen). Its `visual-evidence.json` receipts stay out of the repository |
 
 Where a skill and this file disagree, this file wins.
 
@@ -33,6 +34,9 @@ Copied unchanged from Kompleto on 2026-11-10, with the same entries in `skills-l
 | `frontend-design` | github.com/anthropics/skills, `skills/frontend-design` | `2c5958e` (2026-11-06) | Apache-2.0; the licence is in the folder as `LICENSE.txt` |
 | `web-design-guidelines` | `guidelines.md` is `command.md` from github.com/vercel-labs/web-interface-guidelines | `434b7f9` (2026-10-05) | MIT, Copyright (c) 2025 Vercel Labs; the licence is in the folder as `LICENSE` |
 | `tdd`, `grilling`, `grill-me`, `domain-modeling` | github.com/mattpocock/skills, `skills/engineering/tdd`, `skills/productivity/grilling`, `skills/productivity/grill-me`, `skills/engineering/domain-modeling` | `4ae2317` (2026-10-31) | MIT, Copyright (c) 2026 Matt Pocock; the licence is copied into each folder as `LICENSE` |
+| `ui-taste` | uizze.sh (`https://uizze.sh/.well-known/skills/ui-taste/`), version 0.3.0 (`uizze-design-v14`), every file matching its `CHECKSUMS.sha256`; added 2026-11-10 | not published as a git commit; pinned by the folder hash in `skills-lock.json` | Apache-2.0 (`LICENSE`), adapted from Impeccable (Apache-2.0) and Appllama's skills (MIT); the notices are in `NOTICE` and `MODIFICATIONS.md` |
+
+**`ui-taste` (added 2026-11-10)** is an unchanged copy, read in full first. It is Markdown guidance plus one optional script, `scripts/verify-visual-evidence.mjs`, which only reads local files to check a screenshot receipt. The upstream install command (`npx skills add https://uizze.sh/`) was not used, since it installs whatever is newest, unread; the files were downloaded from the same address and checked against the bundle's checksums.
 
 **Local changes:**
 
