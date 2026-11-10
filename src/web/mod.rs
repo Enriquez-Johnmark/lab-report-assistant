@@ -9,6 +9,7 @@
 //!   cross-site posts.
 
 mod api;
+mod patient;
 mod spa;
 
 use std::sync::Arc;
@@ -24,9 +25,11 @@ use sqlx::PgPool;
 use tokio::sync::Notify;
 use tower_http::trace::TraceLayer;
 
+use crate::delivery::Delivery;
 use crate::drafts::Drafts;
 use crate::engine::accounts::Logins;
 use crate::engine::clock::Clock;
+use crate::engine::files::MasterKey;
 use crate::lab_reports::LabReports;
 use crate::review::Reviews;
 
@@ -42,6 +45,8 @@ pub struct AppState {
     reports: LabReports,
     drafts: Drafts,
     reviews: Reviews,
+    /// Signs and reads patients' links, once a master key is set.
+    delivery: Option<Delivery>,
     /// Where links in emails point, e.g. `http://127.0.0.1:3000`.
     base_url: String,
     /// `scheme://host[:port]` of the base URL; posts must come from it.
@@ -67,6 +72,7 @@ impl AppState {
             reports: LabReports::new(pool.clone(), clock.clone()),
             drafts: Drafts::new(pool.clone()),
             reviews: Reviews::new(pool.clone(), clock.clone()),
+            delivery: None,
             secure_cookies: base_url.starts_with("https://"),
             wake_sender: Arc::new(Notify::new()),
             web_dir: None,
@@ -75,6 +81,16 @@ impl AppState {
             base_url,
             origin,
         }
+    }
+
+    /// Delivers approved reports, with patients' links signed by a key
+    /// derived from `master` (D1–D4). Without it, approvals are only recorded.
+    #[must_use]
+    pub fn with_master_key(mut self, master: &MasterKey) -> Self {
+        let delivery = Delivery::new(master, &self.base_url);
+        self.reviews = self.reviews.clone().with_delivery(delivery.clone());
+        self.delivery = Some(delivery);
+        self
     }
 
     /// Serves the built React app from `dir` (`web/dist`).
@@ -97,6 +113,7 @@ impl AppState {
 pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(api::routes())
+        .merge(patient::routes())
         .route("/health", get(health))
         .fallback(spa::app)
         .layer(middleware::from_fn_with_state(state.clone(), same_origin_posts))

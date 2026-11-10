@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select d.explanations, d.source, a.content_hash, a.approved_at, p.name as physician,\n                  d.attempt = (select max(attempt) from drafts where tenant_id = $1 and lab_report_id = $2) as \"latest!\"\n           from approvals a\n           join drafts d on d.tenant_id = a.tenant_id and d.id = a.draft_id\n           join physicians p on p.tenant_id = a.tenant_id and p.member_id = a.approved_by\n           where a.tenant_id = $1 and a.draft_id = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "explanations",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "explanations"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "approvals",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "approved_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "approvals",
+            "name": "approved_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "physician",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "physicians",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "latest!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "d499bac31f5b41eaa3f91471168433d4a23e55b0512ee931789a830d36bf91ec"
+}

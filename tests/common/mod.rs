@@ -95,7 +95,7 @@ pub const BASE_URL: &str = "http://lab.example.test";
 
 /// The web app on `pool`.
 pub fn app(pool: &PgPool, clock: Arc<FixedClock>) -> axum::Router {
-    let state = lab_report_assistant::web::AppState::new(pool.clone(), clock, BASE_URL);
+    let state = lab_report_assistant::web::AppState::new(pool.clone(), clock, BASE_URL).with_master_key(&master());
     lab_report_assistant::web::router(state)
 }
 

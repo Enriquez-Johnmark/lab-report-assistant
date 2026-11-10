@@ -211,7 +211,7 @@ const TICK: std::time::Duration = std::time::Duration::from_secs(15);
 /// on 127.0.0.1:3000 and email caught by Mailpit.
 async fn serve() -> anyhow::Result<()> {
     use lab_report_assistant::engine::mail::MailpitMailer;
-    use lab_report_assistant::engine::outbox::{NoExtraChecks, Sender};
+    use lab_report_assistant::engine::outbox::Sender;
     use lab_report_assistant::web::{AppState, router};
 
     tracing_subscriber::fmt()
@@ -227,7 +227,11 @@ async fn serve() -> anyhow::Result<()> {
         .context("running migrations")?;
     let clock: Arc<dyn lab_report_assistant::engine::clock::Clock> = Arc::new(SystemClock);
 
-    let mut state = AppState::new(pool.clone(), clock.clone(), &base_url);
+    let master = lab_report_assistant::engine::files::MasterKey::from_hex(
+        &std::env::var("MASTER_KEY").context("MASTER_KEY is not set: it signs patients' links (see .env.example)")?,
+    )
+    .context("MASTER_KEY is not 64 hex digits")?;
+    let mut state = AppState::new(pool.clone(), clock.clone(), &base_url).with_master_key(&master);
     if let Ok(dir) = std::env::var("WEB_DIR") {
         state = state.with_web_dir(std::path::Path::new(&dir));
     }
@@ -237,9 +241,16 @@ async fn serve() -> anyhow::Result<()> {
         &setting("MAIL_FROM_ADDRESS", "reports@example-womens-health.test"),
     )
     .context("setting up Mailpit")?;
-    let sender = Sender::new(pool.clone(), mailer, clock.clone(), Arc::new(NoExtraChecks));
+    let checks = Arc::new(lab_report_assistant::delivery::CurrentApproval::new(pool.clone()));
+    let sender = Sender::new(pool.clone(), mailer, clock.clone(), checks);
+    let (sweep_pool, sweep_clock) = (pool.clone(), clock.clone());
     tokio::spawn(async move {
         loop {
+            if let Err(err) =
+                lab_report_assistant::delivery::approve_waiting_notices(&sweep_pool, sweep_clock.clone()).await
+            {
+                tracing::error!(%err, "approving waiting notices failed");
+            }
             if let Err(err) = sender.drain_once(50).await {
                 tracing::error!(%err, "sending failed");
             }

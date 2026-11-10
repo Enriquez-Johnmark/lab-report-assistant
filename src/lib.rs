@@ -10,6 +10,7 @@ pub mod drafting;
 pub mod drafts;
 pub mod evidence;
 pub mod fhir;
+pub mod html;
 pub mod lab_reports;
 pub mod made_up;
 pub mod model;

@@ -6,6 +6,8 @@
 //! one test and no failing one; otherwise it is a gap, and the build fails.
 
 use quick_xml::Reader;
+
+use crate::html::escape;
 use quick_xml::events::Event;
 
 /// Where a criterion stands.
@@ -159,13 +161,6 @@ impl Evidence {
 const STYLE: &str = "body{font:16px/1.5 system-ui,sans-serif;margin:2rem auto;max-width:72rem;padding:0 1rem}\
                      table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ccc;padding:.4rem;\
                      text-align:left;vertical-align:top}code{font-size:.9em}";
-
-fn escape(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
 
 /// The spec's criteria: lines such as `- **A1** The generator …`.
 fn criteria(spec: &str) -> Vec<(String, String)> {
