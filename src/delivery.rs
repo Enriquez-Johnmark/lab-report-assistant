@@ -112,6 +112,36 @@ impl PreSendCheck for CurrentApproval {
     }
 }
 
+/// Approves a waiting notice while its report's approved text stands, or
+/// cancels it once that text changed, so it never lingers. `true` if approved.
+async fn finish(
+    outbox: &Outbox,
+    checks: &CurrentApproval,
+    tenant: TenantId,
+    id: MessageId,
+) -> Result<bool, crate::engine::outbox::OutboxError> {
+    match checks.approved_text_stands(tenant, id).await? {
+        Some(true) => {
+            let message = outbox.get(tenant, id).await?;
+            outbox
+                .approve(
+                    tenant,
+                    id,
+                    crate::engine::audit::SYSTEM,
+                    &message.content_hash(),
+                    checks,
+                )
+                .await?;
+            Ok(true)
+        }
+        Some(false) => {
+            outbox.cancel(tenant, id, crate::engine::audit::SYSTEM).await?;
+            Ok(false)
+        }
+        None => Ok(false),
+    }
+}
+
 /// Approves every notice left unapproved because an approval was interrupted
 /// between its own transaction and the engine's (ADR 0001). A system-wide
 /// sweep; each approval names the notice's clinic.
@@ -131,19 +161,12 @@ pub async fn approve_waiting_notices(
     let mut approved = 0;
     for notice in waiting {
         let (tenant, id) = (TenantId::from(notice.tenant_id), MessageId::from(notice.message_id));
-        let message = outbox.get(tenant, id).await?;
-        // A notice whose report changed since stays a draft and is never sent.
-        if checks.approved_text_stands(tenant, id).await? == Some(true) {
-            outbox
-                .approve(
-                    tenant,
-                    id,
-                    crate::engine::audit::SYSTEM,
-                    &message.content_hash(),
-                    &checks,
-                )
-                .await?;
-            approved += 1;
+        // One notice that fails never holds up the rest; it's tried again
+        // next round.
+        match finish(&outbox, &checks, tenant, id).await {
+            Ok(true) => approved += 1,
+            Ok(false) => {}
+            Err(err) => tracing::warn!(%err, message = %id, "couldn't finish a waiting notice"),
         }
     }
     Ok(approved)

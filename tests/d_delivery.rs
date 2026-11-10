@@ -225,3 +225,28 @@ async fn d1_a_message_that_isnt_a_notice_such_as_a_login_link_still_goes_out(poo
 
     assert_eq!(mailer.0.lock().unwrap().len(), 1);
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn c3_a_waiting_notice_whose_report_changed_is_cancelled_by_the_sweep(pool: PgPool) {
+    let (reviews, physician, report) = setup(&pool).await;
+    approve(&pool, &reviews, &physician, report).await;
+    sqlx::query(
+        "update outbox_messages set status = 'draft', approved_hash = null, approved_at = null, approved_by = null",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let text: Vec<Explanation> = (1..=8)
+        .map(|n| Explanation {
+            result: format!("r{n}"),
+            text: format!("Result {n}."),
+        })
+        .collect();
+    reviews.edit(&physician, report, text).await.unwrap();
+
+    lab_report_assistant::delivery::approve_waiting_notices(&pool, clock())
+        .await
+        .unwrap();
+
+    assert_eq!(notices(&pool).await[0].0, "cancelled");
+}
