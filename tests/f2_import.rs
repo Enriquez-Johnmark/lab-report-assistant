@@ -117,3 +117,39 @@ async fn a4_two_clinics_can_import_the_same_file_separately(pool: PgPool) {
 
     assert_eq!(counts(&pool).await, (2, 2, 16));
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn f2_a_report_whose_patient_id_belongs_to_someone_else_is_refused(pool: PgPool) {
+    let reports = LabReports::new(pool.clone(), clock());
+    let clinic = clinic(&pool, "Example Womens Health").await;
+    reports.import(clinic, &demo(1)).await.unwrap();
+    // Another lab's file: a different person who happens to share the id.
+    let other_person = demo(12).replace("patient-12", "patient-01");
+
+    let err = reports.import(clinic, &other_person).await.unwrap_err();
+
+    assert_eq!(
+        err.to_string(),
+        "patient-01 is already a different patient in this clinic (name or email differs)"
+    );
+    assert_eq!(counts(&pool).await.1, 1);
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn f2_the_same_report_imported_twice_at_once_is_imported_once(pool: PgPool) {
+    let reports = LabReports::new(pool.clone(), clock());
+    let clinic = clinic(&pool, "Example Womens Health").await;
+    let json = demo(12);
+
+    let (first, second) = tokio::join!(reports.import(clinic, &json), reports.import(clinic, &json));
+
+    let outcomes = [first, second];
+    assert_eq!(outcomes.iter().filter(|outcome| outcome.is_ok()).count(), 1);
+    assert!(
+        outcomes
+            .iter()
+            .any(|o| matches!(o, Err(ImportError::AlreadyImported(_)))),
+        "{outcomes:?}"
+    );
+    assert_eq!(counts(&pool).await, (1, 1, 8));
+}

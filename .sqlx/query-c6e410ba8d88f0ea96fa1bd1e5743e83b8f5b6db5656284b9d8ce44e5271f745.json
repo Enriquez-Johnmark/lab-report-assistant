@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into patients (id, tenant_id, fhir_id, name, email, created_at)\n             values ($1, $2, $3, $4, $5, $6)\n             on conflict (tenant_id, fhir_id) do nothing",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6e410ba8d88f0ea96fa1bd1e5743e83b8f5b6db5656284b9d8ce44e5271f745"
+}

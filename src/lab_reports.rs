@@ -32,6 +32,9 @@ pub enum ImportError {
     /// The clinic already has a report with this FHIR id.
     #[error("{0} is already imported")]
     AlreadyImported(String),
+    /// The clinic already has a different patient with this FHIR id.
+    #[error("{0} is already a different patient in this clinic (name or email differs)")]
+    OtherPatient(String),
     /// No such report in this clinic.
     #[error("lab report not found")]
     NotFound,
@@ -131,11 +134,13 @@ impl LabReports {
         if taken {
             return Err(ImportError::AlreadyImported(report.fhir_id));
         }
-        let patient = sqlx::query_scalar!(
+        // A patient's FHIR id is only unique within the system that made the
+        // file: an id already used by a different person is refused, never
+        // merged into that person's record.
+        sqlx::query!(
             "insert into patients (id, tenant_id, fhir_id, name, email, created_at)
              values ($1, $2, $3, $4, $5, $6)
-             on conflict (tenant_id, fhir_id) do update set fhir_id = excluded.fhir_id
-             returning id",
+             on conflict (tenant_id, fhir_id) do nothing",
             PatientId::new().as_uuid(),
             clinic.as_uuid(),
             report.patient.fhir_id,
@@ -143,22 +148,37 @@ impl LabReports {
             report.patient.email,
             now,
         )
+        .execute(&mut *tx)
+        .await?;
+        let patient = sqlx::query!(
+            "select id, name, email from patients where tenant_id = $1 and fhir_id = $2",
+            clinic.as_uuid(),
+            report.patient.fhir_id,
+        )
         .fetch_one(&mut *tx)
         .await?;
+        if patient.name != report.patient.name || patient.email != report.patient.email {
+            return Err(ImportError::OtherPatient(report.patient.fhir_id));
+        }
         let id = LabReportId::new();
         sqlx::query!(
             "insert into lab_reports (id, tenant_id, patient_id, fhir_id, name, effective, imported_at)
              values ($1, $2, $3, $4, $5, $6, $7)",
             id.as_uuid(),
             clinic.as_uuid(),
-            patient,
+            patient.id,
             report.fhir_id,
             report.name,
             report.effective,
             now,
         )
         .execute(&mut *tx)
-        .await?;
+        .await
+        .map_err(|err| match err.as_database_error() {
+            // Another import of the same report committed first.
+            Some(db) if db.is_unique_violation() => ImportError::AlreadyImported(report.fhir_id.clone()),
+            _ => ImportError::Database(err),
+        })?;
         for (position, result) in (0i32..).zip(&report.results) {
             sqlx::query!(
                 "insert into lab_results
