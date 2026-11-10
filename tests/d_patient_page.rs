@@ -270,3 +270,15 @@ async fn d5_only_fetching_the_link_shows_a_button_not_the_report_and_logs_nothin
         .unwrap();
     assert_eq!(openings, 0);
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d6_a_report_stays_readable_after_its_physician_leaves_the_clinic(pool: PgPool) {
+    let s = setup(pool).await;
+    let (_, link) = s.approve(0).await;
+    sqlx::query("delete from physicians").execute(&s.pool).await.unwrap();
+
+    let (status, page) = s.open(&link).await;
+
+    assert_eq!(status, 200);
+    assert!(page.contains("reviewed and approved by your physician on"), "{page}");
+}

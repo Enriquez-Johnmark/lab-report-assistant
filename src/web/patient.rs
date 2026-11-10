@@ -89,11 +89,11 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
         ));
     }
     let approved = sqlx::query!(
-        r#"select d.explanations, d.source, a.content_hash, a.approved_at, p.name as physician,
+        r#"select d.explanations, d.source, a.content_hash, a.approved_at, p.name as "physician?",
                   d.attempt = (select max(attempt) from drafts where tenant_id = $1 and lab_report_id = $2) as "latest!"
            from approvals a
            join drafts d on d.tenant_id = a.tenant_id and d.id = a.draft_id
-           join physicians p on p.tenant_id = a.tenant_id and p.member_id = a.approved_by
+           left join physicians p on p.tenant_id = a.tenant_id and p.member_id = a.approved_by
            where a.tenant_id = $1 and a.draft_id = $3"#,
         clinic.as_uuid(),
         report.as_uuid(),
@@ -145,16 +145,15 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
         .approved_at
         .format(format_description!("[month repr:long] [day padding:none], [year]"))
         .unwrap_or_default();
+    // A physician who has since left the clinic is no longer named.
+    let physician = escape(approved.physician.as_deref().unwrap_or("your physician"));
     let made = match approved.source.as_str() {
-        "model" => format!(
-            "Drafted with AI, reviewed and approved by {} on {day}.",
-            escape(&approved.physician)
-        ),
+        "model" => format!("Drafted with AI, reviewed and approved by {} on {day}.", physician),
         "template" => format!(
             "Drafted from a fixed template, reviewed and approved by {} on {day}.",
-            escape(&approved.physician)
+            physician
         ),
-        _ => format!("Written and approved by {} on {day}.", escape(&approved.physician)),
+        _ => format!("Written and approved by {} on {day}.", physician),
     };
     let mut rows = String::new();
     for (position, row) in table(&lab_report.results).into_iter().enumerate() {

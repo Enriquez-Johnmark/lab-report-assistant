@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select d.explanations, d.source, a.content_hash, a.approved_at, p.name as physician,\n                  d.attempt = (select max(attempt) from drafts where tenant_id = $1 and lab_report_id = $2) as \"latest!\"\n           from approvals a\n           join drafts d on d.tenant_id = a.tenant_id and d.id = a.draft_id\n           join physicians p on p.tenant_id = a.tenant_id and p.member_id = a.approved_by\n           where a.tenant_id = $1 and a.draft_id = $3",
+  "query": "select d.explanations, d.source, a.content_hash, a.approved_at, p.name as \"physician?\",\n                  d.attempt = (select max(attempt) from drafts where tenant_id = $1 and lab_report_id = $2) as \"latest!\"\n           from approvals a\n           join drafts d on d.tenant_id = a.tenant_id and d.id = a.draft_id\n           left join physicians p on p.tenant_id = a.tenant_id and p.member_id = a.approved_by\n           where a.tenant_id = $1 and a.draft_id = $3",
   "describe": {
     "columns": [
       {
@@ -49,7 +49,7 @@
       },
       {
         "ordinal": 4,
-        "name": "physician",
+        "name": "physician?",
         "type_info": "Text",
         "origin": {
           "Table": {
@@ -77,9 +77,9 @@
       false,
       false,
       false,
-      false,
+      true,
       null
     ]
   },
-  "hash": "d499bac31f5b41eaa3f91471168433d4a23e55b0512ee931789a830d36bf91ec"
+  "hash": "714f588b876b7744db2298662dcf8c2ec8a3d1ab02b05b8247d90b5daeb12f3d"
 }
