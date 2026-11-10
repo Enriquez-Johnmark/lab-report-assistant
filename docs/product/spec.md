@@ -1,6 +1,6 @@
 # Spec: Lab Report Assistant
 
-Decided round by round with the owner; the single source for spec decisions. The brief is `brief.md`. Status: **in progress** (Rounds 1–2 decided 2026-11-10; Round 3, the acceptance criteria, proposed).
+Decided round by round with the owner; the single source for spec decisions. The brief is `brief.md`. Status: **complete** (Rounds 1–3 decided 2026-11-10), with 38 acceptance criteria.
 
 ## Words
 
@@ -99,3 +99,69 @@ A blocked draft can't be approved; the physician can write the report by hand in
 ## Tooling (Round 2, 2026-11-10)
 
 - Rust 1.99.1, axum, sqlx, Nudgewright v0.4.5; the web app with pnpm, Vite, React and shadcn, with API types generated from Rust into TypeScript; Playwright browser tests; GitHub Actions.
+
+## Acceptance criteria (Round 3, 2026-11-10)
+
+Each criterion has a test whose name starts with its ID, e.g. `b4_a_draft_with_a_digit_is_blocked`. The evidence pack matches them.
+
+### A. Data and privacy
+
+- **A1** The generator writes the same 20 patients and 30 lab reports every time, valid FHIR R4, each marked as made up.
+- **A2** A request to the model carries only each result's name, code, value, unit, range and flag: no name, birth date, record number, address, age or sex.
+- **A3** CI fails if the repository names a real company or holds a real patient record.
+- **A4** One clinic never sees another's data: every query is scoped to the clinic.
+
+### B. Drafts and checks
+
+- **B1** The model's answer is parsed into one entry per result; anything that doesn't parse is blocked.
+- **B2** A draft missing an explanation for any result is blocked.
+- **B3** A draft explaining a result that isn't in the lab report is blocked.
+- **B4** A draft whose text contains a digit is blocked.
+- **B5** A draft that calls a flagged value normal, or an in-range value high or low, is blocked.
+- **B6** A draft with diagnosis, treatment or medication wording is blocked.
+- **B7** The values, units and ranges shown come only from the lab data, never from the model.
+- **B8** Every blocked draft shows the physician which check failed and for which result.
+
+### C. Physician review
+
+- **C1** Only the physician can approve; the administrator's approval is refused.
+- **C2** A blocked draft can't be approved.
+- **C3** An approval binds the exact text: if it changes afterwards, nothing is delivered until it is approved again.
+- **C4** A physician's edit that leaves out a result can't be approved.
+- **C5** Diagnosis wording in a physician's edit shows a warning but can be approved.
+- **C6** A third new draft is refused; the report is then written by hand.
+- **C7** A report written by hand passes the coverage check and can be approved.
+
+### D. Delivery
+
+- **D1** Nothing reaches the outbox without an approval.
+- **D2** A crash during sending never sends a report twice.
+- **D3** The email holds no test name, value or result, only the notice and the link.
+- **D4** A changed, expired (older than 30 days) or other patient's link is refused.
+- **D5** Each opening of the patient's page is logged.
+- **D6** The patient's page shows how the report was made, who approved it and when, and the made-up-demo banner.
+
+### E. Audit log
+
+- **E1** Import, draft, each check, edit, approve, reject, send and open are each logged with who and when.
+- **E2** The database refuses to change or delete an audit entry.
+- **E3** A lab report's timeline lists its steps in order; the clinic-wide list filters by person and action.
+
+### F. Logins and import
+
+- **F1** Logging in works only through a fresh emailed link; every page and API except the patient's link needs a login.
+- **F2** Importing a broken or non-lab FHIR file is refused with the reason, and imports nothing.
+- **F3** After an import, a draft is made by a background job without the physician doing anything.
+- **F4** "Load the demo data" loads the 30 lab reports once; pressing it again adds nothing.
+
+### G. Measurement
+
+- **G1** All 40 hand-written bad drafts are blocked, each by the check it was written to trip.
+- **G2** At least 90% of Claude's recorded drafts pass the checks, and the report lists every one that didn't.
+- **G3** The same report compares Sonnet and Haiku: pass rate and cost per report.
+- **G4** Tests and CI run from the recorded answers, with no API key.
+
+### H. Evidence pack
+
+- **H1** Every acceptance criterion is matched to its tests and their results; a criterion with no passing test fails the build.
+- **H2** The page names the commit it was built from and whether that commit is signed.
