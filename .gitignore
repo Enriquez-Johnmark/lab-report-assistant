@@ -2,3 +2,4 @@
 cloud_signing
 # Real patient data never comes here.
 data/
+target/
