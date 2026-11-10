@@ -58,6 +58,7 @@ pub struct LabResult {
 /// Where the lab says a value sits against its range.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export))]
 pub enum Flag {
     /// Below the range.
     Low,

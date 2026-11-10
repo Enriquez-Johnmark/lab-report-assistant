@@ -13,6 +13,7 @@ pub mod lab_reports;
 pub mod made_up;
 pub mod model;
 pub mod review;
+pub mod web;
 
 /// The engine, Nudgewright, pinned to a release.
 pub use nudgewright as engine;

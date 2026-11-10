@@ -108,6 +108,18 @@ impl Drafts {
         Self { pool }
     }
 
+    /// How many drafts the model (or the template in its place) has written
+    /// for the lab report (C6).
+    pub async fn model_drafts(&self, clinic: ClinicId, report: LabReportId) -> Result<i64, DraftError> {
+        Ok(sqlx::query_scalar!(
+            r#"select count(*) as "count!" from drafts where tenant_id = $1 and lab_report_id = $2 and source <> 'physician'"#,
+            clinic.as_uuid(),
+            report.as_uuid(),
+        )
+        .fetch_one(&self.pool)
+        .await?)
+    }
+
     /// The lab report's latest draft, if it has one.
     pub async fn latest(&self, clinic: ClinicId, report: LabReportId) -> Result<Option<StoredDraft>, DraftError> {
         let Some(row) = sqlx::query!(
