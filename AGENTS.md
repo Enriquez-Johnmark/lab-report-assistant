@@ -20,7 +20,7 @@ Code follows the build order in `docs/architecture.md`, one milestone at a time,
 
 ## Owner decisions
 
-Every decision needing the owner's judgement is put as numbered rounds of questions, each with a recommended answer, worded so "yes" accepts it. Record every approved decision, dated, in `docs/decisions.md`. Record hard-to-reverse, non-obvious trade-offs in `docs/adr/`, and the project's words in `GLOSSARY.md`; use those words in code, docs and messages.
+Every decision needing the owner's judgement goes through the `grilling` skill: numbered rounds of questions, each with a recommended answer, worded so "yes" accepts it. Record every approved decision, dated, in `docs/decisions.md`. Record hard-to-reverse, non-obvious trade-offs in `docs/adr/`, and the project's words in `GLOSSARY.md`, using the `domain-modeling` skill; use those words in code, docs and messages.
 
 ## Evidence
 
@@ -38,7 +38,7 @@ Research claims carry a source (URL, publisher, date), and a confidence (H/M/L).
 - **No compliance claims.** The README never says "HIPAA compliant" or "certified"; it says what the code enforces and how it is tested.
 - **Read the `rust-best-practices` skill** (`.claude/skills/rust-best-practices`) before writing or reviewing Rust.
 - **React:** read the `vercel-react-best-practices`, `vercel-composition-patterns`, `shadcn`, `frontend-design` and `web-design-guidelines` skills (`.claude/skills/`) before writing or reviewing React, and follow `docs/frontend.md`; where they disagree, `docs/frontend.md` wins. Third-party skills are read in full before they're added, recorded in `skills-lock.json` and `docs/frontend.md` with source, commit and licence, and may not run unpinned commands.
-- **Tests:** every acceptance criterion has a test whose name starts with its ID.
+- **Tests:** test first, using the `tdd` skill (one criterion's test, see it fail, then make it pass); every acceptance criterion has a test whose name starts with its ID.
 - **Report test results only from commands actually run.**
 - **Time:** read only through the engine's injected `Clock`; direct system-clock calls are banned with clippy `disallowed-methods`.
 - **Clinic isolation:** every repository function takes a `ClinicId` (the engine's `TenantId`), and every query filters on it; the exceptions are in `docs/architecture.md`.

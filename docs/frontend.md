@@ -26,8 +26,15 @@ Copied unchanged from Kompleto on 2026-11-10, with the same entries in `skills-l
 | `shadcn` | github.com/shadcn-ui/ui, `skills/shadcn` | `25af02b` (2026-10-22) | MIT, Copyright (c) 2023 shadcn; the licence is in the folder as `LICENSE.md` |
 | `frontend-design` | github.com/anthropics/skills, `skills/frontend-design` | `2c5958e` (2026-11-06) | Apache-2.0; the licence is in the folder as `LICENSE.txt` |
 | `web-design-guidelines` | `guidelines.md` is `command.md` from github.com/vercel-labs/web-interface-guidelines | `434b7f9` (2026-10-05) | MIT, Copyright (c) 2025 Vercel Labs; the licence is in the folder as `LICENSE` |
+| `tdd`, `grilling`, `grill-me`, `domain-modeling` | github.com/mattpocock/skills, `skills/engineering/tdd`, `skills/productivity/grilling`, `skills/productivity/grill-me`, `skills/engineering/domain-modeling` | `4ae2317` (2026-10-31) | MIT, Copyright (c) 2026 Matt Pocock; the licence is copied into each folder as `LICENSE` |
 
 **Local changes:**
 
 - `shadcn/SKILL.md` (made in Kompleto): `allowed-tools` removed, which pre-approved every `shadcn` command with any arguments; the line that ran `npx shadcn@latest info` unpinned on every load removed. Run a pinned `pnpm dlx shadcn@<version> … -c web` by hand; the version is pinned here once `web/` exists.
 - `web-design-guidelines/SKILL.md`: written locally. Upstream it downloads its rules from the guidelines repository's `main` branch each time it is used, so they could change unread; here it reads the pinned copy, `guidelines.md`.
+
+**The workflow skills (added 2026-11-10)** are unchanged copies, read in full first; they hold guidance only and run nothing. The upstream install command (`npx skills@latest add mattpocock/skills`) was not used, since it installs whatever is newest, unread. How they apply here:
+
+- `tdd`: its "seams" are this project's acceptance criteria, already agreed with the owner in `docs/product/spec.md`, so they aren't asked again. It refers to two skills not added here: `codebase-design` (optional vocabulary) and its own `code-review` (this session's built-in `code-review` skill is used instead).
+- `grilling` (and `grill-me`, which only calls it): numbered rounds with a recommended answer for every owner decision.
+- `domain-modeling`: `GLOSSARY.md` and `docs/adr/`, created when the first term or decision needs them.
