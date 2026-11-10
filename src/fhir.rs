@@ -224,7 +224,7 @@ pub fn read_lab_report(json: &str) -> Result<LabReport, FhirError> {
     let patient = of_type(&bundle, "Patient")
         .find(|e| format!("Patient/{}", e.resource["id"].as_str().unwrap_or_default()) == subject)
         .ok_or_else(|| FhirError::Report(format!("the patient {subject} is not in the bundle")))?;
-    let patient = read_patient(parse(patient.resource.clone(), "the Patient")?);
+    let patient = read_patient(parse(patient.resource.clone(), "the Patient")?)?;
     if report.result.is_empty() {
         return Err(FhirError::Report(format!("{} has no results", report.id)));
     }
@@ -257,7 +257,7 @@ fn reference(reference: Option<&Reference>) -> Option<String> {
     reference.and_then(|r| r.reference.clone())
 }
 
-fn read_patient(patient: PatientResource) -> Patient {
+fn read_patient(patient: PatientResource) -> Result<Patient, FhirError> {
     let name = patient
         .name
         .first()
@@ -272,17 +272,28 @@ fn read_patient(patient: PatientResource) -> Patient {
                 (!parts.is_empty()).then(|| parts.join(" "))
             })
         })
-        .unwrap_or_default();
+        .filter(|name| !name.trim().is_empty())
+        .ok_or_else(|| FhirError::Report(format!("{}: no name", patient.id)))?;
     let email = patient
         .telecom
         .into_iter()
         .find(|t| t.system.as_deref() == Some("email"))
         .and_then(|t| t.value);
-    Patient {
+    // The notice is sent to this address (D3), so it must be one address.
+    if email
+        .as_deref()
+        .is_some_and(|email| !crate::engine::accounts::is_email_address(email))
+    {
+        return Err(FhirError::Report(format!(
+            "{}: the email address is not valid",
+            patient.id
+        )));
+    }
+    Ok(Patient {
         fhir_id: patient.id,
         name,
         email,
-    }
+    })
 }
 
 fn read_result(obs: Observation, patient: &str) -> Result<LabResult, FhirError> {

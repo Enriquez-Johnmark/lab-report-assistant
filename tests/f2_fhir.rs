@@ -133,3 +133,17 @@ fn f2_a_result_for_another_patient_is_refused() {
     });
     assert_eq!(refusal(&json), "obs-12-01 (Glucose): for another patient");
 }
+
+#[test]
+fn f2_a_patient_email_that_isnt_one_address_is_refused() {
+    for email in ["lena", "lena@example.test, other@example.test"] {
+        let json = changed("Patient", |patient| patient["telecom"][0]["value"] = email.into());
+        assert_eq!(refusal(&json), "patient-12: the email address is not valid");
+    }
+}
+
+#[test]
+fn f2_a_patient_without_a_name_is_refused() {
+    let json = changed("Patient", |patient| patient["name"] = Value::Array(vec![]));
+    assert_eq!(refusal(&json), "patient-12: no name");
+}
