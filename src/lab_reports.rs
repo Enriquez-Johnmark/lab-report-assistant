@@ -188,8 +188,8 @@ impl LabReports {
         }
         let id = LabReportId::new();
         sqlx::query!(
-            "insert into lab_reports (id, tenant_id, patient_id, fhir_id, name, effective, imported_at)
-             values ($1, $2, $3, $4, $5, $6, $7)",
+            "insert into lab_reports (id, tenant_id, patient_id, fhir_id, name, effective, imported_at, source_fhir)
+             values ($1, $2, $3, $4, $5, $6, $7, $8)",
             id.as_uuid(),
             clinic.as_uuid(),
             patient.id,
@@ -197,6 +197,7 @@ impl LabReports {
             report.name,
             report.effective,
             now,
+            json,
         )
         .execute(&mut *tx)
         .await
@@ -247,6 +248,20 @@ impl LabReports {
             )
             .await?;
         Ok(id)
+    }
+
+    /// The FHIR file the lab report was imported from, exactly as it
+    /// arrived; empty for a report imported before files were kept.
+    pub async fn source(&self, clinic: ClinicId, id: LabReportId) -> Result<String, ImportError> {
+        let source = sqlx::query_scalar!(
+            "select source_fhir from lab_reports where tenant_id = $1 and id = $2",
+            clinic.as_uuid(),
+            id.as_uuid(),
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(ImportError::NotFound)?;
+        Ok(source.unwrap_or_default())
     }
 
     /// The clinic's lab reports, newest first.

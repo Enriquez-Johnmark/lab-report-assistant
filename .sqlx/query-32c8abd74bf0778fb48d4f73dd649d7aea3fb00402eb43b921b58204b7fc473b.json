@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select source_fhir from lab_reports where tenant_id = $1 and id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source_fhir",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "lab_reports",
+            "name": "source_fhir"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "32c8abd74bf0778fb48d4f73dd649d7aea3fb00402eb43b921b58204b7fc473b"
+}

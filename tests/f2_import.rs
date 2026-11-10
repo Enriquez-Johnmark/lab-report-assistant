@@ -153,3 +153,16 @@ async fn f2_the_same_report_imported_twice_at_once_is_imported_once(pool: PgPool
     );
     assert_eq!(counts(&pool).await, (1, 1, 8));
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn f2_the_imported_file_is_kept_exactly_as_it_arrived(pool: PgPool) {
+    let reports = LabReports::new(pool.clone(), clock());
+    let (ours, theirs) = (
+        clinic(&pool, "Example Womens Health").await,
+        clinic(&pool, "Other Clinic").await,
+    );
+    let id = reports.import(ours, &demo(12)).await.unwrap();
+
+    assert_eq!(reports.source(ours, id).await.unwrap(), demo(12));
+    assert!(matches!(reports.source(theirs, id).await, Err(ImportError::NotFound)));
+}
