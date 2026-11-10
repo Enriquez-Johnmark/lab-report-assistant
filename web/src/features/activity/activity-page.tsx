@@ -57,6 +57,9 @@ export function ActivityPage() {
             placeholder="dr.example@example.test…"
             defaultValue={actor}
             onBlur={(event) => setFilter("actor", event.target.value.trim())}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") setFilter("actor", event.currentTarget.value.trim())
+            }}
           />
         </div>
         <div className="flex flex-col gap-1.5">
