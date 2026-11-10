@@ -117,10 +117,17 @@ impl<M: LanguageModel> LanguageModel for Recording<M> {
             input_tokens: reply.input_tokens,
             output_tokens: reply.output_tokens,
         };
-        let json = serde_json::to_string_pretty(&saved).map_err(|err| LlmError::Malformed(err.to_string()))?;
-        std::fs::create_dir_all(&self.dir)
-            .and_then(|()| std::fs::write(path(&self.dir, self.inner.model(), request), format!("{json}\n")))
-            .map_err(|err| LlmError::Unavailable(format!("couldn't save the recorded answer: {err}")))?;
+        // The answer was paid for: a failed save is reported, never allowed
+        // to throw it away.
+        let saved = serde_json::to_string_pretty(&saved)
+            .map_err(std::io::Error::other)
+            .and_then(|json| {
+                std::fs::create_dir_all(&self.dir)?;
+                std::fs::write(path(&self.dir, self.inner.model(), request), format!("{json}\n"))
+            });
+        if let Err(err) = saved {
+            eprintln!("couldn't save a recorded answer in {}: {err}", self.dir.display());
+        }
         Ok(reply)
     }
 }

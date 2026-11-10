@@ -85,3 +85,16 @@ async fn g4_a_changed_request_or_model_doesnt_replay_an_old_answer() {
             .is_err()
     );
 }
+
+#[tokio::test]
+async fn g4_an_answer_that_cant_be_saved_is_still_returned() {
+    let dir = tempfile::tempdir().unwrap();
+    let not_a_folder = dir.path().join("taken");
+    std::fs::write(&not_a_folder, "a file, not a folder").unwrap();
+
+    let reply = Recording::new(Counting(AtomicUsize::new(0)), &not_a_folder)
+        .complete(&request("one"))
+        .await;
+
+    assert_eq!(reply.unwrap().input_tokens, 120, "the paid answer isn't thrown away");
+}
