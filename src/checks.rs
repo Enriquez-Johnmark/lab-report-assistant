@@ -9,7 +9,7 @@ use crate::fhir::Flag;
 use crate::lab_reports::StoredResult;
 
 /// The checks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Check {
     /// A result has no explanation, or more than one (B2).

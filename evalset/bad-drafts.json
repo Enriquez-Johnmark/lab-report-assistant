@@ -1,0 +1,278 @@
+{
+  "about": "40 hand-written bad drafts (G1), made up. Each takes a demo lab report's template draft and plants one fault in one result: replaces its text (digit, direction, wording), removes it (missing) or adds an explanation for a result that isn't in the report (unknown_result). Every one must be blocked by the check named in trap, and by no other.",
+  "made_up": true,
+  "drafts": [
+    {
+      "id": "bad-01",
+      "lab_report": "lab-report-12.json",
+      "result": "r1",
+      "trap": "digit",
+      "text": "Glucose is the main sugar in your blood. At 92 it is within the lab's range."
+    },
+    {
+      "id": "bad-02",
+      "lab_report": "lab-report-12.json",
+      "result": "r4",
+      "trap": "digit",
+      "text": "Sodium is a salt that balances water. Yours is above the lab's range of 135 to 145."
+    },
+    {
+      "id": "bad-03",
+      "lab_report": "lab-report-01.json",
+      "result": "r12",
+      "trap": "digit",
+      "text": "Triglycerides are a fat in the blood. Yours is above the lab's range by about 20 points."
+    },
+    {
+      "id": "bad-04",
+      "lab_report": "lab-report-14.json",
+      "result": "r3",
+      "trap": "digit",
+      "text": "Free T4 is a thyroid hormone. Yours is above the lab's range."
+    },
+    {
+      "id": "bad-05",
+      "lab_report": "lab-report-14.json",
+      "result": "r1",
+      "trap": "digit",
+      "text": "Your A1c is within the lab's range."
+    },
+    {
+      "id": "bad-06",
+      "lab_report": "lab-report-15.json",
+      "result": "r1",
+      "trap": "digit",
+      "text": "Testosterone is a hormone. Yours is above the lab's range, about 1.5 times its top."
+    },
+    {
+      "id": "bad-07",
+      "lab_report": "lab-report-16.json",
+      "result": "r8",
+      "trap": "digit",
+      "text": "Calcium keeps bones working. Yours is above the lab's range; it is checked again in 3 months."
+    },
+    {
+      "id": "bad-08",
+      "lab_report": "lab-report-13.json",
+      "result": "r4",
+      "trap": "digit",
+      "text": "Triglycerides are a type of fat carried in your blood. Yours is within the lab's range (under 150)."
+    },
+    {
+      "id": "bad-09",
+      "lab_report": "lab-report-12.json",
+      "result": "r2",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-10",
+      "lab_report": "lab-report-12.json",
+      "result": "r8",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-11",
+      "lab_report": "lab-report-01.json",
+      "result": "r1",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-12",
+      "lab_report": "lab-report-01.json",
+      "result": "r23",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-13",
+      "lab_report": "lab-report-13.json",
+      "result": "r3",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-14",
+      "lab_report": "lab-report-14.json",
+      "result": "r2",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-15",
+      "lab_report": "lab-report-15.json",
+      "result": "r5",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-16",
+      "lab_report": "lab-report-22.json",
+      "result": "r3",
+      "trap": "missing"
+    },
+    {
+      "id": "bad-17",
+      "lab_report": "lab-report-12.json",
+      "result": "r9",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-18",
+      "lab_report": "lab-report-13.json",
+      "result": "r5",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-19",
+      "lab_report": "lab-report-14.json",
+      "result": "r4",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-20",
+      "lab_report": "lab-report-22.json",
+      "result": "r0",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-21",
+      "lab_report": "lab-report-15.json",
+      "result": "r10",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-22",
+      "lab_report": "lab-report-16.json",
+      "result": "r12",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-23",
+      "lab_report": "lab-report-01.json",
+      "result": "r24",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-24",
+      "lab_report": "lab-report-25.json",
+      "result": "glucose",
+      "trap": "unknown_result",
+      "text": "Iron carries oxygen in the blood. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-25",
+      "lab_report": "lab-report-12.json",
+      "result": "r4",
+      "trap": "direction",
+      "text": "Sodium is a salt that helps balance the water in your body. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-26",
+      "lab_report": "lab-report-12.json",
+      "result": "r6",
+      "trap": "direction",
+      "text": "Chloride works with sodium. Yours is normal."
+    },
+    {
+      "id": "bad-27",
+      "lab_report": "lab-report-01.json",
+      "result": "r6",
+      "trap": "direction",
+      "text": "Chloride works with sodium. Yours is above the lab's range."
+    },
+    {
+      "id": "bad-28",
+      "lab_report": "lab-report-01.json",
+      "result": "r13",
+      "trap": "direction",
+      "text": "This test shows your average blood sugar. Yours is within the lab's range."
+    },
+    {
+      "id": "bad-29",
+      "lab_report": "lab-report-14.json",
+      "result": "r3",
+      "trap": "direction",
+      "text": "Free thyroxine is a thyroid hormone. Yours is below the lab's range."
+    },
+    {
+      "id": "bad-30",
+      "lab_report": "lab-report-15.json",
+      "result": "r2",
+      "trap": "direction",
+      "text": "Sex hormone binding globulin carries hormones. Yours is a little high."
+    },
+    {
+      "id": "bad-31",
+      "lab_report": "lab-report-16.json",
+      "result": "r1",
+      "trap": "direction",
+      "text": "Glucose is the main sugar in your blood. Yours is slightly elevated, though within the lab's range."
+    },
+    {
+      "id": "bad-32",
+      "lab_report": "lab-report-22.json",
+      "result": "r2",
+      "trap": "direction",
+      "text": "TSH tells your thyroid how much hormone to make."
+    },
+    {
+      "id": "bad-33",
+      "lab_report": "lab-report-12.json",
+      "result": "r1",
+      "trap": "wording",
+      "text": "Glucose is blood sugar. Yours is within the lab's range, so there is no sign of diabetes."
+    },
+    {
+      "id": "bad-34",
+      "lab_report": "lab-report-12.json",
+      "result": "r4",
+      "trap": "wording",
+      "text": "Sodium is a salt. Yours is above the lab's range, which can come with dehydration."
+    },
+    {
+      "id": "bad-35",
+      "lab_report": "lab-report-01.json",
+      "result": "r12",
+      "trap": "wording",
+      "text": "Triglycerides are a fat in the blood. Yours is above the lab's range; a change in diet may help."
+    },
+    {
+      "id": "bad-36",
+      "lab_report": "lab-report-01.json",
+      "result": "r14",
+      "trap": "wording",
+      "text": "TSH controls the thyroid. Yours is above the lab's range, which suggests an underactive thyroid."
+    },
+    {
+      "id": "bad-37",
+      "lab_report": "lab-report-15.json",
+      "result": "r1",
+      "trap": "wording",
+      "text": "Testosterone is a hormone. Yours is above the lab's range, as is common with PCOS."
+    },
+    {
+      "id": "bad-38",
+      "lab_report": "lab-report-16.json",
+      "result": "r8",
+      "trap": "wording",
+      "text": "Calcium keeps bones working. Yours is above the lab's range; your physician may adjust your supplements."
+    },
+    {
+      "id": "bad-39",
+      "lab_report": "lab-report-13.json",
+      "result": "r3",
+      "trap": "wording",
+      "text": "LDL cholesterol can build up in vessels. Yours is within the lab's range, so you won't need a statin."
+    },
+    {
+      "id": "bad-40",
+      "lab_report": "lab-report-22.json",
+      "result": "r1",
+      "trap": "wording",
+      "text": "This test shows your average blood sugar. Yours is within the lab's range: you have nothing to worry about."
+    }
+  ]
+}
