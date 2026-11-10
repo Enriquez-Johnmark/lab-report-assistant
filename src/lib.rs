@@ -2,6 +2,7 @@
 //! report. The model drafts it, code checks it, a physician approves the exact
 //! text, the engine delivers the notice once, and every step is audited.
 
+pub mod checks;
 pub mod demo_data;
 pub mod drafting;
 pub mod evidence;
