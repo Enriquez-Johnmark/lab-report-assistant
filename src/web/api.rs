@@ -56,6 +56,8 @@ async fn not_found() -> ApiError {
 pub struct ErrorBody {
     /// One sentence for the person.
     pub message: String,
+    /// Each problem found; may be empty.
+    pub problems: Vec<String>,
 }
 
 /// An API failure.
@@ -90,7 +92,14 @@ impl IntoResponse for ApiError {
                 "Something went wrong. Please try again.".to_owned(),
             ),
         };
-        (status, Json(ErrorBody { message })).into_response()
+        (
+            status,
+            Json(ErrorBody {
+                message,
+                problems: Vec::new(),
+            }),
+        )
+            .into_response()
     }
 }
 

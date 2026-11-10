@@ -7,4 +7,8 @@ export type ErrorBody = {
 /**
  * One sentence for the person.
  */
-message: string, };
+message: string, 
+/**
+ * Each problem found; may be empty.
+ */
+problems: Array<string>, };

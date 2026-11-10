@@ -42,6 +42,8 @@ jobs:
         run: cargo clippy --all-targets --all-features --locked -- -D warnings
       - name: Test
         run: cargo nextest run --all-features --locked --profile ci
+      - name: The API's TypeScript types are committed (written by the tests)
+        run: test -z "$(git status --porcelain web/src/api/generated)"
       # Fails the build when a finished milestone's criterion has no passing
       # test (docs/architecture.md). Runs after failed tests too, to show
       # them, but not when the tests never ran.
@@ -57,6 +59,31 @@ jobs:
         with:
           name: evidence-pack
           path: target/evidence/index.html
+
+  web:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Lint and format
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
 
   dependencies:
     runs-on: ubuntu-24.04
