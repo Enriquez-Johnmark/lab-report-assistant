@@ -494,6 +494,10 @@ async fn timeline(
     ApiMember(member): ApiMember,
     ReportPath(id): ReportPath,
 ) -> Result<Json<Vec<AuditView>>, ApiError> {
+    state.reports.get(member.tenant, id).await.map_err(|err| match err {
+        ImportError::NotFound => ApiError::NotFound,
+        other => ApiError::internal(other),
+    })?;
     let entries = state.reviews.timeline(member.tenant, id).await?;
     Ok(Json(entries.into_iter().map(AuditView::from).collect()))
 }
