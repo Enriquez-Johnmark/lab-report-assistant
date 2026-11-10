@@ -10,7 +10,7 @@ use lab_report_assistant::engine::clock::SystemClock;
 use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
-                     import --clinic ID FILE...";
+                     import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE]";
 
 fn main() -> ExitCode {
     let result = tokio::runtime::Builder::new_multi_thread()
@@ -49,6 +49,7 @@ async fn run() -> anyhow::Result<()> {
             Ok(())
         }
         Some("import") => import(&args).await,
+        Some("evidence") => evidence(&args),
         _ => anyhow::bail!(USAGE),
     }
 }
@@ -109,5 +110,31 @@ async fn import(args: &[String]) -> anyhow::Result<()> {
         }
     }
     anyhow::ensure!(refused == 0, "{refused} file(s) refused");
+    Ok(())
+}
+
+/// Writes the evidence pack from the spec, the build order and the JUnit
+/// test results; fails, naming each gap, if any criterion is unproven.
+fn evidence(args: &[String]) -> anyhow::Result<()> {
+    let read = |path: &str| std::fs::read_to_string(path).with_context(|| format!("reading {path}"));
+    let junit = option(args, "--junit").unwrap_or("target/nextest/ci/junit.xml");
+    let out = std::path::Path::new(option(args, "--out").unwrap_or("target/evidence/index.html"));
+    let signed = match option(args, "--signed").ok() {
+        Some("true") => Some(true),
+        Some("false") => Some(false),
+        _ => None,
+    };
+    let evidence = lab_report_assistant::evidence::Evidence::build(
+        &read("docs/product/spec.md")?,
+        &read("docs/architecture.md")?,
+        &read(junit)?,
+    )?;
+    if let Some(dir) = out.parent() {
+        std::fs::create_dir_all(dir).context("creating the evidence folder")?;
+    }
+    std::fs::write(out, evidence.html(option(args, "--commit")?, signed)).context("writing the evidence page")?;
+    println!("wrote {}", out.display());
+    let gaps = evidence.gaps();
+    anyhow::ensure!(gaps.is_empty(), "{} gap(s):\n{}", gaps.len(), gaps.join("\n"));
     Ok(())
 }
