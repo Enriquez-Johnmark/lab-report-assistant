@@ -11,7 +11,8 @@ use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
                      import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
-                     work [--record | --recorded]";
+                     work [--record | --recorded] | serve | \
+                     clinic add-physician --clinic ID --email EMAIL --name NAME";
 
 fn main() -> ExitCode {
     let result = tokio::runtime::Builder::new_multi_thread()
@@ -49,6 +50,21 @@ async fn run() -> anyhow::Result<()> {
             println!("{clinic}");
             Ok(())
         }
+        Some("clinic") if args.get(1).map(String::as_str) == Some("add-physician") => {
+            let clinic: ClinicId = option(&args, "--clinic")?
+                .parse::<uuid::Uuid>()
+                .context("--clinic is not a clinic ID")?
+                .into();
+            let (email, name) = (option(&args, "--email")?, option(&args, "--name")?);
+            let reviews = lab_report_assistant::review::Reviews::new(connect().await?, Arc::new(SystemClock));
+            reviews
+                .add_physician(clinic, email, name, "operator")
+                .await
+                .context("adding the physician")?;
+            println!("added {name} <{email}>");
+            Ok(())
+        }
+        Some("serve") => serve().await,
         Some("import") => import(&args).await,
         Some("evidence") => evidence(&args),
         Some("work") => work(&args).await,
@@ -164,7 +180,6 @@ fn api_key() -> Option<String> {
 /// neither flag, the template drafts.
 async fn work(args: &[String]) -> anyhow::Result<()> {
     use lab_report_assistant::drafts::{Drafter, work};
-    use lab_report_assistant::engine::llm::AnthropicClient;
     use lab_report_assistant::model::{DIR, Recorded, Recording};
 
     let pool = connect().await?;
@@ -172,13 +187,6 @@ async fn work(args: &[String]) -> anyhow::Result<()> {
     let jobs = lab_report_assistant::engine::jobs::Jobs::new(pool.clone(), clock.clone());
     let dir = std::path::Path::new(DIR);
     let flag = |name: &str| args.iter().any(|arg| arg == name);
-    let live = || -> anyhow::Result<Option<AnthropicClient>> {
-        let Some(key) = api_key() else { return Ok(None) };
-        let base = std::env::var("ANTHROPIC_BASE_URL").unwrap_or_else(|_| "https://api.anthropic.com".to_owned());
-        let client = AnthropicClient::new(&base, key.into(), &drafting_model(), std::time::Duration::from_secs(90))
-            .context("setting up the model client")?;
-        Ok(Some(client))
-    };
     let ran = if flag("--recorded") {
         work(
             &jobs,
@@ -186,11 +194,92 @@ async fn work(args: &[String]) -> anyhow::Result<()> {
         )
         .await?
     } else if flag("--record") {
-        let client = live()?.context("--record needs the owner's API key")?;
+        let client = live_model()?.context("--record needs the owner's API key")?;
         work(&jobs, &Drafter::new(pool, clock, Some(Recording::new(client, dir)))).await?
     } else {
-        work(&jobs, &Drafter::new(pool, clock, live()?)).await?
+        work(&jobs, &Drafter::new(pool, clock, live_model()?)).await?
     };
     println!("ran {ran} drafting job(s)");
     Ok(())
+}
+
+/// How often `serve` drains the outbox, and drafts what is due.
+const TICK: std::time::Duration = std::time::Duration::from_secs(15);
+
+/// Runs the web app, the outbox sender (login emails go out at once) and the
+/// drafting worker, until stopped. Development settings by default: the app
+/// on 127.0.0.1:3000 and email caught by Mailpit.
+async fn serve() -> anyhow::Result<()> {
+    use lab_report_assistant::engine::mail::MailpitMailer;
+    use lab_report_assistant::engine::outbox::{NoExtraChecks, Sender};
+    use lab_report_assistant::web::{AppState, router};
+
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .init();
+    let setting = |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_owned());
+    let bind = setting("BIND_ADDR", "127.0.0.1:3000");
+    let base_url = setting("PUBLIC_BASE_URL", &format!("http://{bind}"));
+    let pool = connect().await?;
+    lab_report_assistant::MIGRATOR
+        .run(&pool)
+        .await
+        .context("running migrations")?;
+    let clock: Arc<dyn lab_report_assistant::engine::clock::Clock> = Arc::new(SystemClock);
+
+    let mut state = AppState::new(pool.clone(), clock.clone(), &base_url);
+    if let Ok(dir) = std::env::var("WEB_DIR") {
+        state = state.with_web_dir(std::path::Path::new(&dir));
+    }
+    let wake = state.sender_wake_up();
+    let mailer = MailpitMailer::new(
+        &setting("MAILPIT_URL", "http://localhost:8025"),
+        &setting("MAIL_FROM_ADDRESS", "reports@example-womens-health.test"),
+    )
+    .context("setting up Mailpit")?;
+    let sender = Sender::new(pool.clone(), mailer, clock.clone(), Arc::new(NoExtraChecks));
+    tokio::spawn(async move {
+        loop {
+            if let Err(err) = sender.drain_once(50).await {
+                tracing::error!(%err, "sending failed");
+            }
+            let _ = tokio::time::timeout(TICK, wake.notified()).await;
+        }
+    });
+
+    let drafter = lab_report_assistant::drafts::Drafter::new(pool.clone(), clock.clone(), live_model()?);
+    let jobs = lab_report_assistant::engine::jobs::Jobs::new(pool.clone(), clock.clone());
+    tokio::spawn(async move {
+        loop {
+            if let Err(err) = lab_report_assistant::drafts::work(&jobs, &drafter).await {
+                tracing::error!(%err, "drafting failed");
+            }
+            tokio::time::sleep(TICK).await;
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind(&bind)
+        .await
+        .with_context(|| format!("listening on {bind}"))?;
+    tracing::info!(%bind, %base_url, "serving");
+    axum::serve(listener, router(state))
+        .with_graceful_shutdown(async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
+        .await
+        .context("serving")
+}
+
+/// Claude through the owner's key, or `None` (the template drafts).
+fn live_model() -> anyhow::Result<Option<lab_report_assistant::engine::llm::AnthropicClient>> {
+    let Some(key) = api_key() else { return Ok(None) };
+    let base = std::env::var("ANTHROPIC_BASE_URL").unwrap_or_else(|_| "https://api.anthropic.com".to_owned());
+    let client = lab_report_assistant::engine::llm::AnthropicClient::new(
+        &base,
+        key.into(),
+        &drafting_model(),
+        std::time::Duration::from_secs(90),
+    )
+    .context("setting up the model client")?;
+    Ok(Some(client))
 }
