@@ -219,6 +219,16 @@ impl LabReports {
             .execute(&mut *tx)
             .await?;
         }
+        crate::audit::record(
+            &mut *tx,
+            clinic,
+            now,
+            crate::engine::audit::SYSTEM,
+            "lab_report.imported",
+            id,
+            serde_json::json!({ "fhir_id": report.fhir_id, "results": report.results.len() }),
+        )
+        .await?;
         tx.commit().await?;
         // Drafting starts by itself (F3), outside the import's transaction:
         // a slow model never holds the import up.

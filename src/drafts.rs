@@ -228,6 +228,7 @@ impl<M: LanguageModel> Drafter<M> {
             failures
         };
         let id = DraftId::new();
+        let mut tx = self.pool.begin().await?;
         sqlx::query!(
             "insert into drafts (id, tenant_id, lab_report_id, attempt, source, model, explanations, failures, blocked, created_at)
              values ($1, $2, $3,
@@ -243,8 +244,31 @@ impl<M: LanguageModel> Drafter<M> {
             !failures.is_empty(),
             self.clock.now(),
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+        let now = self.clock.now();
+        let actor = crate::engine::audit::SYSTEM;
+        let details =
+            json!({ "draft_id": id, "source": source.as_str(), "model": model, "blocked": !failures.is_empty() });
+        crate::audit::record(&mut *tx, clinic, now, actor, "lab_report.drafted", report, details).await?;
+        if failures.is_empty() {
+            crate::audit::record(
+                &mut *tx,
+                clinic,
+                now,
+                actor,
+                "lab_report.checks_passed",
+                report,
+                json!({ "draft_id": id }),
+            )
+            .await?;
+        }
+        for failure in &failures {
+            let details =
+                json!({ "draft_id": id, "check": failure.check, "result": failure.result, "detail": failure.detail });
+            crate::audit::record(&mut *tx, clinic, now, actor, "lab_report.check_failed", report, details).await?;
+        }
+        tx.commit().await?;
         Ok(id)
     }
 }
