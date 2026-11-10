@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select name from physicians where tenant_id = $1 and member_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "physicians",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "91ddce9acf6015ae099cd60a83d2be96e744fff3191f68962d4a26a403f24cd5"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select id, attempt, source, explanations, failures, blocked from drafts\n             where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
+  "query": "select id, attempt, source, explanations, failures, blocked, warnings from drafts\n             where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
   "describe": {
     "columns": [
       {
@@ -68,6 +68,17 @@
             "name": "blocked"
           }
         }
+      },
+      {
+        "ordinal": 6,
+        "name": "warnings",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "warnings"
+          }
+        }
       }
     ],
     "parameters": {
@@ -82,8 +93,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "60ece91743243f6b8bc492b7adbf122500f433952658d7b8d8d52a109aa8651e"
+  "hash": "1d6557a061a70f12752026dbf27658f486190bd0d9fb8f3038e577f47f40743c"
 }

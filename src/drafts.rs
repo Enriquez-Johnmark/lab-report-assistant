@@ -11,6 +11,7 @@ use time::Duration;
 
 use crate::checks::{Check, Failure, check_draft};
 use crate::drafting::{Explanation, parse_answer, request, template_draft};
+use crate::engine::audit::SYSTEM;
 use crate::engine::clock::Clock;
 use crate::engine::cost_log::{self, LlmCall, Outcome};
 use crate::engine::id_type;
@@ -38,7 +39,7 @@ pub enum Source {
 }
 
 impl Source {
-    fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::Model => "model",
             Self::Template => "template",
@@ -71,6 +72,8 @@ pub struct StoredDraft {
     pub failures: Vec<Failure>,
     /// Whether a failed check blocks it.
     pub blocked: bool,
+    /// Warnings shown to the physician that don't block it (C5).
+    pub warnings: Vec<String>,
 }
 
 /// Drafting errors.
@@ -108,7 +111,7 @@ impl Drafts {
     /// The lab report's latest draft, if it has one.
     pub async fn latest(&self, clinic: ClinicId, report: LabReportId) -> Result<Option<StoredDraft>, DraftError> {
         let Some(row) = sqlx::query!(
-            "select id, attempt, source, explanations, failures, blocked from drafts
+            "select id, attempt, source, explanations, failures, blocked, warnings from drafts
              where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
             clinic.as_uuid(),
             report.as_uuid(),
@@ -125,6 +128,7 @@ impl Drafts {
             explanations: serde_json::from_value(row.explanations)?,
             failures: serde_json::from_value(row.failures)?,
             blocked: row.blocked,
+            warnings: serde_json::from_value(row.warnings)?,
         }))
     }
 }
@@ -227,50 +231,101 @@ impl<M: LanguageModel> Drafter<M> {
         } else {
             failures
         };
-        let id = DraftId::new();
-        let mut tx = self.pool.begin().await?;
-        sqlx::query!(
-            "insert into drafts (id, tenant_id, lab_report_id, attempt, source, model, explanations, failures, blocked, created_at)
-             values ($1, $2, $3,
-                     (select coalesce(max(attempt), 0) + 1 from drafts where tenant_id = $2 and lab_report_id = $3),
-                     $4, $5, $6, $7, $8, $9)",
-            id.as_uuid(),
-            clinic.as_uuid(),
-            report.as_uuid(),
-            source.as_str(),
+        let draft = NewDraft {
+            source,
             model,
-            json!(explanations),
-            json!(failures),
-            !failures.is_empty(),
+            explanations,
+            failures,
+            warnings: Vec::new(),
+        };
+        let mut tx = self.pool.begin().await?;
+        let id = store(
+            &mut tx,
+            clinic,
+            report,
+            &draft,
             self.clock.now(),
+            SYSTEM,
+            "lab_report.drafted",
         )
-        .execute(&mut *tx)
         .await?;
-        let now = self.clock.now();
-        let actor = crate::engine::audit::SYSTEM;
-        let details =
-            json!({ "draft_id": id, "source": source.as_str(), "model": model, "blocked": !failures.is_empty() });
-        crate::audit::record(&mut *tx, clinic, now, actor, "lab_report.drafted", report, details).await?;
-        if failures.is_empty() {
-            crate::audit::record(
-                &mut *tx,
-                clinic,
-                now,
-                actor,
-                "lab_report.checks_passed",
-                report,
-                json!({ "draft_id": id }),
-            )
-            .await?;
-        }
-        for failure in &failures {
-            let details =
-                json!({ "draft_id": id, "check": failure.check, "result": failure.result, "detail": failure.detail });
-            crate::audit::record(&mut *tx, clinic, now, actor, "lab_report.check_failed", report, details).await?;
-        }
         tx.commit().await?;
         Ok(id)
     }
+}
+
+/// A draft to store.
+pub(crate) struct NewDraft {
+    /// Who wrote it.
+    pub source: Source,
+    /// The model that wrote it, if one did.
+    pub model: Option<String>,
+    /// The explanations.
+    pub explanations: Vec<Explanation>,
+    /// The checks it failed; any failure blocks it.
+    pub failures: Vec<Failure>,
+    /// Warnings that don't block it.
+    pub warnings: Vec<String>,
+}
+
+/// The fingerprint of a draft's exact text, which an approval names (C3).
+pub fn content_hash(explanations: &[Explanation]) -> String {
+    use sha2::Digest;
+    hex::encode(sha2::Sha256::digest(json!(explanations).to_string().as_bytes()))
+}
+
+/// Stores `draft` as the lab report's next attempt, logging it as `action` by
+/// `actor` with each failed check, inside the caller's transaction.
+pub(crate) async fn store(
+    tx: &mut sqlx::PgConnection,
+    clinic: ClinicId,
+    report: LabReportId,
+    draft: &NewDraft,
+    now: time::OffsetDateTime,
+    actor: &str,
+    action: &str,
+) -> Result<DraftId, sqlx::Error> {
+    let id = DraftId::new();
+    let blocked = !draft.failures.is_empty();
+    sqlx::query!(
+        "insert into drafts
+             (id, tenant_id, lab_report_id, attempt, source, model, explanations, failures, blocked, warnings, created_at)
+         values ($1, $2, $3,
+                 (select coalesce(max(attempt), 0) + 1 from drafts where tenant_id = $2 and lab_report_id = $3),
+                 $4, $5, $6, $7, $8, $9, $10)",
+        id.as_uuid(),
+        clinic.as_uuid(),
+        report.as_uuid(),
+        draft.source.as_str(),
+        draft.model,
+        json!(draft.explanations),
+        json!(draft.failures),
+        blocked,
+        json!(draft.warnings),
+        now,
+    )
+    .execute(&mut *tx)
+    .await?;
+    let details = json!({ "draft_id": id, "source": draft.source.as_str(), "model": draft.model, "blocked": blocked });
+    crate::audit::record(&mut *tx, clinic, now, actor, action, report, details).await?;
+    if draft.failures.is_empty() && draft.source != Source::Physician {
+        crate::audit::record(
+            &mut *tx,
+            clinic,
+            now,
+            actor,
+            "lab_report.checks_passed",
+            report,
+            json!({ "draft_id": id }),
+        )
+        .await?;
+    }
+    for failure in &draft.failures {
+        let details =
+            json!({ "draft_id": id, "check": failure.check, "result": failure.result, "detail": failure.detail });
+        crate::audit::record(&mut *tx, clinic, now, actor, "lab_report.check_failed", report, details).await?;
+    }
+    Ok(id)
 }
 
 /// How long a worker holds a drafting job before another may take it.
