@@ -23,11 +23,18 @@ An AI assistant that turns a patient's lab results into a plain-language report 
 
 ## See it
 
-A 90-second walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
+A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
 
 | The physician reviews Claude's draft beside the lab's own values | The patient's page, from the emailed link |
 |---|---|
 | ![Review](docs/showcase/desktop-2-review.png) | ![Patient's report on a phone](docs/showcase/phone-1-patient-report.png) |
+
+## Where the data comes from
+
+- **In the demo:** 30 made-up lab reports for 20 made-up patients from a made-up lab, as FHIR R4 files in [`demo/lab-reports/`](demo/lab-reports/). FHIR is the standard format record systems and labs use to exchange health data: each file is a Bundle holding the patient, the lab report (a `DiagnosticReport`) and one `Observation` per test, with its value, unit, the lab's range and flag. They're written by a generator from a fixed seed (`cargo run -- demo-data`), and every resource carries the HL7 "test health data" label (`HTEST`), so no tool can mistake one for a real record.
+- **Getting it in:** the administrator presses "Load the demo data", or `cargo run -- import --clinic <ID> <files>` imports any FHIR R4 lab Bundle. Each file is checked strictly; a broken one is refused with the reason and nothing is imported.
+- **In the app:** the review page shows the lab's own file under "Lab data (FHIR R4)", exactly as imported; the results table is built from it, and Claude only writes the words beside it.
+- **In a real clinic:** the same Bundles would come from the clinic's record system or its lab through their FHIR API instead of files. Connecting to a live system is outside this first version (`docs/product/brief.md`); nothing here has seen real patient data.
 
 ## What the code enforces
 
