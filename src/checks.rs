@@ -76,12 +76,16 @@ pub fn check_draft(explanations: &[Explanation], results: &[StoredResult]) -> Ve
             continue;
         };
         let result = &results[position];
-        if explanation.text.chars().any(char::is_numeric) {
+        if explanation.text.chars().any(char::is_numeric)
+            || words(&explanation.text)
+                .iter()
+                .any(|word| NUMBER_WORDS.contains(&word.as_str()))
+        {
             failures.push(failure(
                 Check::Digit,
                 &explanation.result,
                 Some(result),
-                "the text contains a digit",
+                "the text contains a digit or a number in words",
             ));
         }
         if let Some(problem) = direction_problem(&explanation.text, result.flag) {
@@ -94,6 +98,49 @@ pub fn check_draft(explanations: &[Explanation], results: &[StoredResult]) -> Ve
     }
     failures
 }
+
+/// Numbers written out, which the digit check counts as digits: the values
+/// come from the lab data alone (B7). "One" is left out, as in "one of".
+const NUMBER_WORDS: &[&str] = &[
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+    "twenty",
+    "thirty",
+    "forty",
+    "fifty",
+    "sixty",
+    "seventy",
+    "eighty",
+    "ninety",
+    "hundred",
+    "hundreds",
+    "thousand",
+    "thousands",
+    "million",
+    "percent",
+    "twice",
+    "double",
+    "triple",
+    "half",
+    "dozen",
+    "point",
+];
 
 /// Words that place a value above, below or within the range.
 const ABOVE: &[&str] = &["above", "high", "higher", "highest", "elevated", "raised", "increased"];

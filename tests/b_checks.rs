@@ -221,3 +221,16 @@ fn b5_high_density_and_low_density_name_a_cholesterol_not_a_direction() {
     );
     assert_eq!(failures, []);
 }
+
+#[test]
+fn b4_a_number_written_in_words_is_blocked_too() {
+    for text in [
+        "Calcium is at ten point five, above the lab's range.",
+        "Calcium is above the lab's range, about twenty percent over its top.",
+        "Calcium is above the lab's range, twice its usual level.",
+    ] {
+        let mut worded = good();
+        worded[1] = explain("r2", text);
+        assert!(failed(&worded).contains(&(Check::Digit, Some("r2".into()))), "{text}");
+    }
+}

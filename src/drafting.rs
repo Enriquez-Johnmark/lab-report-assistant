@@ -19,7 +19,7 @@ sees them. For each result you are given, write one or two short sentences: what
 value is within, above or below the lab's own reference range, as the lab's flag says.
 
 Rules:
-- Write no digits at all. The values, units and ranges are shown next to your text. If a test's name contains a \
+- Write no digits and no numbers in words. The values, units and ranges are shown next to your text. If a test's name contains a \
 digit (such as a test named with a letter and a number), don't repeat the name: say \"this test\" or describe what it \
 measures.
 - Say \"within the lab's range\" for a normal flag, \"above the lab's range\" for a high flag and \"below the lab's \
