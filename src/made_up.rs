@@ -76,7 +76,10 @@ const UNMARKED: &str = "a FHIR resource not marked as made-up test data (HTEST)"
 fn fhir_problem(path: &str, text: &str) -> Option<&'static str> {
     let unmarked = |json: &str| match serde_json::from_str::<serde_json::Value>(json) {
         Ok(json) => (!every_resource_marked(&json)).then_some(UNMARKED),
-        Err(_) => Some("not valid JSON, so it can't be checked"),
+        // Configuration files such as tsconfig.json allow comments; only
+        // unreadable JSON that holds a FHIR resource matters.
+        Err(_) if json.contains("resourceType") => Some("not valid JSON, so it can't be checked"),
+        Err(_) => None,
     };
     if path.ends_with(".json") {
         unmarked(text)

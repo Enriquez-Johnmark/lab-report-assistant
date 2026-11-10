@@ -91,3 +91,15 @@ fn a3_ndjson_and_xml_fhir_files_are_checked_too() {
         ]
     );
 }
+
+#[test]
+fn a3_a_configuration_file_with_comments_is_not_a_patient_record() {
+    let root = tempfile::tempdir().unwrap();
+    write(
+        root.path(),
+        "web/tsconfig.json",
+        "{\n  // comments are allowed here\n  \"compilerOptions\": {}\n}\n",
+    );
+
+    assert!(problems(root.path()).is_empty());
+}
