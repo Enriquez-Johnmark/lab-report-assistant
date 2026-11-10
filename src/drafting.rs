@@ -248,15 +248,15 @@ pub fn placement(flag: Flag) -> &'static str {
 }
 
 /// A draft from fixed wording, for when no model is set up: what each test
-/// measures and where its value sits. A test it has no wording for is named
-/// as it is.
+/// measures and where its value sits. A test it has no wording for isn't
+/// named, since a lab's test names may hold digits or direction words.
 pub fn template_draft(results: &[StoredResult]) -> Vec<Explanation> {
     results
         .iter()
         .enumerate()
         .map(|(position, result)| {
             let measures = MEASURES.iter().find(|(code, _)| *code == result.code).map_or_else(
-                || format!("{} is one of the tests in this report.", result.name),
+                || "This is one of the tests in this report.".to_owned(),
                 |(_, text)| (*text).to_owned(),
             );
             Explanation {

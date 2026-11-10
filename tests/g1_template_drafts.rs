@@ -27,3 +27,18 @@ fn g1_the_template_draft_of_every_demo_report_passes_every_check() {
         );
     }
 }
+
+#[test]
+fn g1_the_template_passes_for_a_test_it_has_no_wording_for() {
+    use lab_report_assistant::fhir::Flag;
+    let b12 = StoredResult {
+        code: "2132-9".into(),
+        name: "Vitamin B12".into(),
+        value: 300.0,
+        unit: "pg/mL".into(),
+        low: Some(200.0),
+        high: Some(900.0),
+        flag: Flag::Normal,
+    };
+    assert!(check_draft(&template_draft(std::slice::from_ref(&b12)), &[b12]).is_empty());
+}
