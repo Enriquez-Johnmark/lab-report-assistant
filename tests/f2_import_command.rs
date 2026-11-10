@@ -51,6 +51,7 @@ async fn f2_the_import_command_imports_good_files_and_names_each_refused_one(poo
             "import",
             "--clinic",
             &clinic,
+            "missing.json",
             "demo/lab-reports/lab-report-12.json",
             broken.to_str().unwrap(),
         ],
