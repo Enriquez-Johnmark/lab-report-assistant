@@ -19,7 +19,9 @@ sees them. For each result you are given, write one or two short sentences: what
 value is within, above or below the lab's own reference range, as the lab's flag says.
 
 Rules:
-- Write no digits at all. The values, units and ranges are shown next to your text.
+- Write no digits at all. The values, units and ranges are shown next to your text. If a test's name contains a \
+digit (such as a test named with a letter and a number), don't repeat the name: say \"this test\" or describe what it \
+measures.
 - Say \"within the lab's range\" for a normal flag, \"above the lab's range\" for a high flag and \"below the lab's \
 range\" for a low flag. Use no other words for direction: never high, low, elevated, raised, reduced or normal.
 - Never name a condition or disease, never say what a result means for the patient's health, and never mention \
