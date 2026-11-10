@@ -83,3 +83,67 @@ pub fn request(results: &[StoredResult]) -> LlmRequest {
         max_tokens: 2_000,
     }
 }
+
+/// One explanation, as the model wrote it.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Explanation {
+    /// The result it explains, e.g. `r1`.
+    pub result: String,
+    /// What it says.
+    pub text: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Answer {
+    explanations: Vec<Explanation>,
+}
+
+/// Why an answer couldn't be read.
+#[derive(Debug, thiserror::Error)]
+#[error("the model's answer is not in the expected form: {0}")]
+pub struct AnswerError(String);
+
+/// Reads the model's answer: an object holding only `explanations`, each with
+/// only a result id and a text. Anything else is refused, so the answer can't
+/// carry values of its own (B1, B7).
+pub fn parse_answer(answer: &str) -> Result<Vec<Explanation>, AnswerError> {
+    serde_json::from_str::<Answer>(answer)
+        .map(|answer| answer.explanations)
+        .map_err(|err| AnswerError(err.to_string()))
+}
+
+/// One row of the results table, built from the lab data alone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TableRow {
+    /// The test's name.
+    pub test: String,
+    /// The value, as stored.
+    pub value: String,
+    /// Its unit.
+    pub unit: String,
+    /// The lab's range, e.g. `70 to 99`.
+    pub range: String,
+    /// The lab's flag.
+    pub flag: Flag,
+}
+
+/// The results table shown beside the explanations (B7).
+pub fn table(results: &[StoredResult]) -> Vec<TableRow> {
+    results
+        .iter()
+        .map(|result| TableRow {
+            test: result.name.clone(),
+            value: result.value.to_string(),
+            unit: result.unit.clone(),
+            range: match (result.low, result.high) {
+                (Some(low), Some(high)) => format!("{low} to {high}"),
+                (None, Some(high)) => format!("up to {high}"),
+                (Some(low), None) => format!("{low} or more"),
+                (None, None) => String::new(),
+            },
+            flag: result.flag,
+        })
+        .collect()
+}
