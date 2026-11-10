@@ -4,6 +4,7 @@
 use std::fmt;
 
 use crate::drafting::{Explanation, result_id};
+use crate::fhir::Flag;
 use crate::lab_reports::StoredResult;
 
 /// The checks.
@@ -16,6 +17,9 @@ pub enum Check {
     UnknownResult,
     /// The text contains a digit (B4).
     Digit,
+    /// The text puts the value on the wrong side of the range, or nowhere
+    /// (B5).
+    Direction,
 }
 
 /// One failed check.
@@ -75,8 +79,44 @@ pub fn check_draft(explanations: &[Explanation], results: &[StoredResult]) -> Ve
                 "the text contains a digit",
             ));
         }
+        if let Some(problem) = direction_problem(&explanation.text, result.flag) {
+            failures.push(failure(Check::Direction, &explanation.result, Some(result), problem));
+        }
     }
     failures
+}
+
+/// Words that place a value above, below or within the range.
+const ABOVE: &[&str] = &["above", "high", "higher", "highest", "elevated", "raised", "increased"];
+const BELOW: &[&str] = &["below", "low", "lower", "lowest", "reduced", "decreased"];
+const WITHIN: &[&str] = &["within", "normal"];
+
+/// The text's words, lowercase, split at anything that isn't a letter.
+pub(crate) fn words(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphabetic())
+        .filter(|word| !word.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+/// What's wrong with where the text puts the value, if anything: it must use
+/// the lab's own side of the range (`within`, `above` or `below`) and no word
+/// for another side.
+fn direction_problem(text: &str, flag: Flag) -> Option<&'static str> {
+    let words = words(text);
+    let says = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
+    let (side, others): (&str, [&[&str]; 2]) = match flag {
+        Flag::Normal => ("within", [ABOVE, BELOW]),
+        Flag::High => ("above", [WITHIN, BELOW]),
+        Flag::Low => ("below", [WITHIN, ABOVE]),
+    };
+    if others.iter().any(|list| says(list)) {
+        Some("the text puts the value on another side of the lab's range than the lab does")
+    } else if !words.iter().any(|word| word == side) {
+        Some("the text doesn't say where the value sits against the lab's range")
+    } else {
+        None
+    }
 }
 
 fn failure(check: Check, id: &str, result: Option<&StoredResult>, detail: &str) -> Failure {

@@ -95,3 +95,65 @@ fn b8_each_failure_names_its_check_and_the_test() {
         "Calcium (r2): no explanation, or more than one"
     );
 }
+
+fn direction_failures(text_r1: &str, text_r2: &str) -> Vec<(Check, Option<String>)> {
+    failed(&[explain("r1", text_r1), explain("r2", text_r2)])
+        .into_iter()
+        .filter(|(check, _)| *check == Check::Direction)
+        .collect()
+}
+
+#[test]
+fn b5_a_flagged_value_called_normal_or_within_range_is_blocked() {
+    let within = "Glucose is sugar in the blood. Yours is within the lab's range.";
+    for wrong in [
+        "Calcium helps bones. Yours is within the lab's range.",
+        "Calcium helps bones. Yours is normal.",
+    ] {
+        assert_eq!(
+            direction_failures(within, wrong),
+            [(Check::Direction, Some("r2".into()))],
+            "{wrong}"
+        );
+    }
+}
+
+#[test]
+fn b5_an_in_range_value_called_high_or_low_is_blocked() {
+    let above = "Calcium helps bones. Yours is above the lab's range.";
+    for wrong in [
+        "Glucose is sugar in the blood. Yours is high.",
+        "Glucose is sugar in the blood. Yours is a little low.",
+        "Glucose is sugar in the blood. Yours is elevated but within the lab's range.",
+    ] {
+        assert_eq!(
+            direction_failures(wrong, above),
+            [(Check::Direction, Some("r1".into()))],
+            "{wrong}"
+        );
+    }
+}
+
+#[test]
+fn b5_a_value_must_be_placed_against_the_range_at_all() {
+    let silent = direction_failures(
+        "Glucose is the main sugar in your blood.",
+        "Calcium helps keep bones strong.",
+    );
+    assert_eq!(
+        silent,
+        [
+            (Check::Direction, Some("r1".into())),
+            (Check::Direction, Some("r2".into()))
+        ]
+    );
+}
+
+#[test]
+fn b5_below_is_not_mistaken_for_low_inside_another_word() {
+    let failures = direction_failures(
+        "Glucose is sugar in the blood. Yours is within the lab's range, which allows for a range of values.",
+        "Calcium helps bones. Yours is above the lab's range.",
+    );
+    assert_eq!(failures, []);
+}
