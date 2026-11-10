@@ -333,3 +333,18 @@ async fn c7_a_new_draft_never_replaces_text_the_physician_wrote_meanwhile(pool: 
 
     assert_eq!(s.latest().await.source, Source::Physician);
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn e1_approving_the_same_text_twice_is_logged_once(pool: PgPool) {
+    let s = setup(pool, Fake(Ok)).await;
+
+    s.approve_latest(&s.physician).await.unwrap();
+    s.approve_latest(&s.physician).await.unwrap();
+
+    let approvals = s
+        .reviews()
+        .clinic_log(s.clinic, None, Some("lab_report.approved"))
+        .await
+        .unwrap();
+    assert_eq!(approvals.len(), 1);
+}

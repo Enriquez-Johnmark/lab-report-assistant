@@ -195,7 +195,7 @@ impl Reviews {
             return Err(ReviewError::Blocked);
         }
         let now = self.clock.now();
-        sqlx::query!(
+        let inserted = sqlx::query!(
             "insert into approvals (draft_id, tenant_id, lab_report_id, content_hash, approved_by, approved_at)
              values ($1, $2, $3, $4, $5, $6) on conflict (draft_id) do nothing",
             draft.as_uuid(),
@@ -206,7 +206,12 @@ impl Reviews {
             now,
         )
         .execute(&mut *tx)
-        .await?;
+        .await?
+        .rows_affected();
+        if inserted == 0 {
+            // Already approved: nothing new happened, so nothing new is logged.
+            return Ok(());
+        }
         let details = json!({ "draft_id": draft, "content_hash": hash });
         crate::audit::record(
             &mut *tx,
@@ -319,7 +324,12 @@ impl Reviews {
             &who.email,
             action,
         )
-        .await?;
+        .await
+        .map_err(|err| match err.as_database_error() {
+            // A new draft was stored at the same moment.
+            Some(db) if db.is_unique_violation() => ReviewError::Changed,
+            _ => ReviewError::Database(err),
+        })?;
         tx.commit().await?;
         Ok(Edited {
             draft: id,
