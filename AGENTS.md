@@ -36,7 +36,8 @@ Research claims carry a source (URL, publisher, date), and a confidence (H/M/L).
 - **Model output is untrusted.** Parsed into strict types and checked by rules before a person sees it.
 - **API key only.** The Claude API through the owner's key (`OWNER_ANTHROPIC_API_KEY`), never a Claude subscription; no data to free model tiers that train on inputs.
 - **No compliance claims.** The README never says "HIPAA compliant" or "certified"; it says what the code enforces and how it is tested.
-- **Read the `rust-best-practices` skill** before writing or reviewing Rust, once the code begins.
+- **Read the `rust-best-practices` skill** (`.claude/skills/rust-best-practices`) before writing or reviewing Rust.
+- **React:** read the `vercel-react-best-practices`, `vercel-composition-patterns`, `shadcn`, `frontend-design` and `web-design-guidelines` skills (`.claude/skills/`) before writing or reviewing React, and follow `docs/frontend.md`; where they disagree, `docs/frontend.md` wins. Third-party skills are read in full before they're added, recorded in `skills-lock.json` and `docs/frontend.md` with source, commit and licence, and may not run unpinned commands.
 - **Tests:** every acceptance criterion has a test whose name starts with its ID.
 - **Report test results only from commands actually run.**
 - **Small commits** on `main`, each one behaviour or one doc change; messages imperative; no AI attribution trailers such as "Co-Authored-By" (owner's choice). Commits are signed with the owner's SSH key, so GitHub shows them as verified.
