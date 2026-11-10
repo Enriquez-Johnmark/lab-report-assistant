@@ -251,7 +251,7 @@ impl Reviews {
         // The engine approves the notice in its own transaction; if this is
         // interrupted, the delivery sweep approves it (ADR 0001).
         if let Some((message, email)) = notice {
-            Outbox::new(self.pool.clone(), self.clock.clone())
+            let approved = Outbox::new(self.pool.clone(), self.clock.clone())
                 .approve(
                     clinic,
                     message,
@@ -259,7 +259,13 @@ impl Reviews {
                     &ContentHash::of(&email),
                     &CurrentApproval::new(self.pool.clone()),
                 )
-                .await?;
+                .await;
+            // The report's approval has committed, so the physician's step
+            // succeeded; the sweep finishes the notice, or the sweep
+            // already did.
+            if let Err(err) = approved {
+                tracing::warn!(%err, %message, "the notice waits for the sweep");
+            }
         }
         Ok(())
     }
