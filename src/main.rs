@@ -302,6 +302,9 @@ async fn outbox_drain() -> anyhow::Result<()> {
     use lab_report_assistant::engine::mail::MailpitMailer;
     use lab_report_assistant::engine::outbox::Sender;
 
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .init();
     let setting = |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_owned());
     let pool = connect().await?;
     let clock: Arc<dyn lab_report_assistant::engine::clock::Clock> = Arc::new(SystemClock);
