@@ -12,6 +12,8 @@ use crate::lab_reports::StoredResult;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Check {
+    /// The model's answer isn't in the expected form (B1).
+    Unreadable,
     /// A result has no explanation, or more than one (B2).
     Missing,
     /// An explanation names a result that isn't in the report (B3).

@@ -85,7 +85,7 @@ pub fn request(results: &[StoredResult]) -> LlmRequest {
 }
 
 /// One explanation, as the model wrote it.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Explanation {
     /// The result it explains, e.g. `r1`.

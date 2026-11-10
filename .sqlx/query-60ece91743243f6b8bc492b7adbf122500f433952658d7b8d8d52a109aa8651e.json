@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select id, attempt, source, explanations, failures, blocked from drafts\n             where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "attempt",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "attempt"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "source",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "source"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "explanations",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "explanations"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "failures",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "failures"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "blocked",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "blocked"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "60ece91743243f6b8bc492b7adbf122500f433952658d7b8d8d52a109aa8651e"
+}

@@ -41,6 +41,9 @@ pub enum ImportError {
     /// The database failed.
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+    /// The drafting job couldn't be queued; the report was imported.
+    #[error("imported, but drafting couldn't be queued: {0}")]
+    Queue(#[from] crate::engine::jobs::JobError),
 }
 
 /// A stored lab report.
@@ -217,6 +220,16 @@ impl LabReports {
             .await?;
         }
         tx.commit().await?;
+        // Drafting starts by itself (F3), outside the import's transaction:
+        // a slow model never holds the import up.
+        crate::engine::jobs::Jobs::new(self.pool.clone(), self.clock.clone())
+            .enqueue(
+                crate::drafts::DRAFT_JOB,
+                &serde_json::json!({ "lab_report_id": id }),
+                Some(clinic),
+                now,
+            )
+            .await?;
         Ok(id)
     }
 
