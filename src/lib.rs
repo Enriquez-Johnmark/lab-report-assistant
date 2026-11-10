@@ -3,6 +3,7 @@
 //! text, the engine delivers the notice once, and every step is audited.
 
 pub mod demo_data;
+pub mod fhir;
 
 /// The engine, Nudgewright, pinned to a release.
 pub use nudgewright as engine;

@@ -1,5 +1,7 @@
 //! A1: the made-up lab data is the same every time and says it is made up.
 
+#![allow(clippy::unwrap_used, reason = "test code: a failed unwrap is a failed test")]
+
 use std::collections::BTreeSet;
 use std::path::Path;
 
@@ -103,4 +105,12 @@ fn a1_the_data_holds_flagged_values_and_values_exactly_on_a_range_edge() {
         flagged >= 30 && on_edge >= 10,
         "flagged {flagged}, on an edge {on_edge}"
     );
+}
+
+#[test]
+fn a1_every_file_reads_as_a_lab_report_with_every_result() {
+    for file in files() {
+        let report = lab_report_assistant::fhir::read_lab_report(&file.json).unwrap();
+        assert!(!report.results.is_empty(), "{}", file.name);
+    }
 }
