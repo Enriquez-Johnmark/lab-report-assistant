@@ -13,6 +13,7 @@ The explanations are Claude Sonnet's, made with the owner's API key on 2026-11-1
 | `desktop-4-patient-link.png` | What the emailed link opens: a button first, so email scanners can't open the report |
 | `desktop-5-patient-report.png` | The patient's report: the approved text, who approved it and how it was made |
 | `phone-1-patient-report.png` | The same on a phone |
+| `phone-2-review.png` | A blocked draft on the physician's phone: one block per result, values outside the range in bold |
 | `desktop-6-blocked-draft.png` | A draft the checks blocked, with the test and the reason (here a false alarm: "normal muscle activity" read as a placement) |
 | `desktop-10-fhir-source.png` | The lab's own FHIR file under the results table: where every value comes from |
 | `desktop-7-edit.png` | The physician editing a draft |

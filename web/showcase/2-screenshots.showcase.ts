@@ -75,6 +75,19 @@ test("screenshots", async ({ browser }) => {
     .click()
   await expect(page.getByText("This draft failed a check, so it can't be approved")).toBeVisible()
   await shot(page, "desktop-6-blocked-draft")
+  // The same review on the physician's phone: one block per result.
+  const phoneContext = await browser.newContext({
+    storageState: await page.context().storageState(),
+    viewport: phone,
+    deviceScaleFactor: 3,
+  })
+  const reviewOnPhone = await phoneContext.newPage()
+  await reviewOnPhone.goto(page.url())
+  await expect(
+    reviewOnPhone.getByText("This draft failed a check, so it can't be approved")
+  ).toBeVisible()
+  await shot(reviewOnPhone, "phone-2-review")
+  await phoneContext.close()
   await page.getByRole("button", { name: "Edit" }).click()
   await shot(page, "desktop-7-edit")
 
