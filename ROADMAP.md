@@ -4,15 +4,15 @@ Where Lab Report Assistant stands and what comes next, in one page. The mileston
 
 ## Where we are
 
-**Three of six milestones done; 30 of 38 acceptance criteria proven** by passing tests. Each milestone's evidence page is in `docs/evidence/`.
+**Four of six milestones done; 36 of 38 acceptance criteria proven** by passing tests. Each milestone's evidence page is in `docs/evidence/`.
 
 | Milestone | Delivers | Criteria | Status |
 | --- | --- | --- | --- |
 | M1 | Made-up lab data, strict FHIR import, clinic separation, the evidence pack | A1, A3, A4, F2, H1, H2 | Done (2026-11-10), code-reviewed |
 | M2 | Claude's drafts and the checks on them, recorded answers, the 40 bad drafts | A2, B1–B7, F3, G1, G4 | Done (2026-11-10), code-reviewed |
 | M3 | Logins, the physician's review, the audit log, the React pages, browser tests | B8, C1–C7, E1–E3, F1, F4 | Done (2026-11-10), code-reviewed |
-| M4 | Delivery: the approved report goes out once as a notice with a signed link; the patient's page shows it and logs each opening | D1–D6 | Next |
-| M5 | Measurement: Claude's drafts of all 30 reports recorded, Sonnet against Haiku | G2, G3 | To do |
+| M4 | Delivery: the approved report goes out once as a notice with a signed link; the patient's page shows it and logs each opening | D1–D6 | Done (2026-11-10), code-reviewed |
+| M5 | Measurement: Claude's drafts of all 30 reports recorded, Sonnet against Haiku | G2, G3 | Next |
 | M6 | Showcase: README results, screenshots, walkthrough video, portfolio page | — | To do |
 
 Each milestone ends with a code review, with its findings fixed.

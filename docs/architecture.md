@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Round 1 decided 2026-11-10; M1, M2 and M3 done.** The spec is [product/spec.md](product/spec.md); the engine is [Nudgewright](https://github.com/Enriquez-Johnmark/nudgewright) v0.4.5; the patterns reused come from [Kompleto](https://github.com/Enriquez-Johnmark/kompleto/blob/main/docs/architecture.md) and [Help Assistant](https://github.com/Enriquez-Johnmark/help-assistant).
+Status: **Round 1 decided 2026-11-10; M1–M4 done.** The spec is [product/spec.md](product/spec.md); the engine is [Nudgewright](https://github.com/Enriquez-Johnmark/nudgewright) v0.4.5; the patterns reused come from [Kompleto](https://github.com/Enriquez-Johnmark/kompleto/blob/main/docs/architecture.md) and [Help Assistant](https://github.com/Enriquez-Johnmark/help-assistant).
 
 ## What the engine already gives
 
@@ -74,6 +74,6 @@ One milestone at a time, test first, each criterion's test named by its ID.
 | M1 | Data and import: the generator, FHIR reading, the import command, clinic scoping, the first evidence pack | A1, A3, A4, F2, H1, H2 | done (2026-11-10) |
 | M2 | Drafts and checks: the model request, parsing, every check, recorded answers, the 40 bad drafts, drafting as a background job | A2, B1–B7, F3, G1, G4 | done (2026-11-10) |
 | M3 | Logins, review and the audit log, with the physician's and administrator's pages | B8, C1–C7, E1–E3, F1, F4 | done (2026-11-10) |
-| M4 | Delivery and the patient's page | D1–D6 | not started |
+| M4 | Delivery and the patient's page | D1–D6 | done (2026-11-10) |
 | M5 | Measurement: Claude's drafts of all 30 lab reports, Sonnet against Haiku | G2, G3 | not started |
 | M6 | Showcase: README results, screenshots, walkthrough video, portfolio page | none | not started |

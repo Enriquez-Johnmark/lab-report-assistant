@@ -2,13 +2,15 @@
 
 An AI assistant that turns a patient's lab results into a plain-language report a physician approves. Claude drafts it; code checks every number, unit and range against the lab data and refuses anything that reads as a diagnosis; the approved text is delivered once; every step is in an append-only audit log.
 
-**Status:** M3 of six done, 30 of 38 acceptance criteria proven ([M3's evidence page](docs/evidence/m3.html)).
+**Status:** M4 of six done, 36 of 38 acceptance criteria proven ([M4's evidence page](docs/evidence/m4.html)).
 
 - **M1:** made-up lab data, strict FHIR import scoped to each clinic, and the evidence pack, which links each criterion to its passing tests.
 - **M2:** Claude drafts each imported report in a background job. The model sees only the results and writes no numbers; code blocks any draft that misses a result, invents one, contains a number, puts a value on the wrong side of the lab's range, or uses diagnosis, treatment or medication wording. Claude's answers are recorded, so the tests need no API key.
 - **M3:** logins by emailed link; the physician reviews each draft beside the lab's values and approves the exact text, edits it, writes it by hand or asks for a new draft (at most two); only a physician can approve; every step is in an append-only audit log the administrator can filter. Browser tests cover the journey.
 
-Delivery to the patient comes next (`docs/architecture.md`).
+- **M4:** an approval queues a notice holding no health information, only a signed link valid 30 days; it is sent once, even across a crash, and only while the approved text still stands. The patient presses "Show my report" to see the approved text beside the lab's values, with who approved it and how it was made; each opening is logged, and the Sent page shows it.
+
+Measuring Claude on all 30 reports comes next (`ROADMAP.md`).
 
 ## Try it
 
