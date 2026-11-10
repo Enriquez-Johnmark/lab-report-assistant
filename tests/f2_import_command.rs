@@ -60,6 +60,7 @@ async fn f2_the_import_command_imports_good_files_and_names_each_refused_one(poo
     let out = String::from_utf8(imported.stdout).unwrap();
     assert!(!imported.status.success(), "a refused file makes the command fail");
     assert!(out.contains("imported demo/lab-reports/lab-report-12.json"), "{out}");
+    assert!(out.contains("refused missing.json: can't be read"), "{out}");
     assert!(
         out.contains("refused") && out.contains("broken.json: not a FHIR Bundle"),
         "{out}"

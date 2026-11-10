@@ -100,12 +100,15 @@ async fn import(args: &[String]) -> anyhow::Result<()> {
     let reports = LabReports::new(connect().await?, Arc::new(SystemClock));
     let mut refused = 0;
     for file in files {
-        let json = std::fs::read_to_string(file).with_context(|| format!("reading {file}"))?;
-        match reports.import(clinic, &json).await {
+        let outcome = match std::fs::read_to_string(file) {
+            Ok(json) => reports.import(clinic, &json).await.map_err(|err| err.to_string()),
+            Err(err) => Err(format!("can't be read ({err})")),
+        };
+        match outcome {
             Ok(_) => println!("imported {file}"),
-            Err(err) => {
+            Err(reason) => {
                 refused += 1;
-                println!("refused {file}: {err}");
+                println!("refused {file}: {reason}");
             }
         }
     }
