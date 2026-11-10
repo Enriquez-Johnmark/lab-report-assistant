@@ -268,3 +268,18 @@ async fn e3_the_clinic_wide_log_filters_by_person_and_action(pool: PgPool) {
     assert_eq!(approvals.len(), 1);
     assert!(all.len() >= 4);
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn c4_an_edit_with_a_blank_explanation_cannot_be_approved(pool: PgPool) {
+    let s = setup(pool, Fake(Ok)).await;
+    let mut text = explanations(8);
+    text[2].text = "   ".into();
+
+    let edited = s.reviews().edit(&s.physician, s.report, text).await.unwrap();
+
+    assert!(edited.blocked);
+    assert!(matches!(
+        s.approve_latest(&s.physician).await,
+        Err(ReviewError::Blocked)
+    ));
+}

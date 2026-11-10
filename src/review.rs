@@ -273,6 +273,8 @@ impl Reviews {
         action: &str,
     ) -> Result<Edited, ReviewError> {
         self.require_physician(who).await?;
+        // A blank explanation explains nothing: it counts as left out (C4).
+        let text: Vec<Explanation> = text.into_iter().filter(|e| !e.text.trim().is_empty()).collect();
         let lab_report = LabReports::new(self.pool.clone(), self.clock.clone())
             .get(who.tenant, report)
             .await
