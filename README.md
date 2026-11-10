@@ -17,7 +17,7 @@ An AI assistant that turns a patient's lab results into a plain-language report 
   | Claude Sonnet (the default) | 27 of 30 (90%) | US$0.0085 |
   | Claude Haiku | 16 of 30 (53%) | US$0.0004 |
 
-  Haiku mostly fails by repeating test names that contain digits ("Free T4"). Of Sonnet's three failed drafts, two were blocked by the checks being cautious ("normal muscle activity" read as a placement; "not bound to proteins" read as a negation) and one for naming "ovarian reserve". Every miss blocked a good draft; none let a bad one through. The checks weren't tuned on these 30 reports, so the numbers stay honest.
+  Haiku mostly fails by repeating test names that contain digits ("Free T4"). Of Sonnet's three failed drafts, two were blocked by the checks being cautious ("normal muscle activity" read as a placement; "not bound to proteins" read as a negation) and one for naming "ovarian reserve". Every failure was a draft held back, never one let through. The checks weren't tuned on these 30 reports, so the numbers stay honest.
 
 - **M6:** the showcase below.
 
