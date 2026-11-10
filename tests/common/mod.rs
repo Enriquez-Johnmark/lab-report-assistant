@@ -167,3 +167,8 @@ pub async fn log_in(app: &axum::Router, pool: &PgPool, email: &str) -> String {
         .cookie
         .unwrap()
 }
+
+/// A development master key; the data here is test data.
+pub fn master() -> lab_report_assistant::engine::files::MasterKey {
+    lab_report_assistant::engine::files::MasterKey::from_hex(&"ab".repeat(32)).unwrap()
+}

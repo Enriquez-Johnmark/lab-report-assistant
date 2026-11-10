@@ -4,6 +4,7 @@
 
 pub mod audit;
 pub mod checks;
+pub mod delivery;
 pub mod demo_data;
 pub mod drafting;
 pub mod drafts;

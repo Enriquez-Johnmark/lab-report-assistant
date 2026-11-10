@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select p.email, a.name as clinic_name from lab_reports r\n             join patients p on p.tenant_id = r.tenant_id and p.id = r.patient_id\n             join accounts a on a.tenant_id = r.tenant_id\n             where r.tenant_id = $1 and r.id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "email",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "patients",
+            "name": "email"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "clinic_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "accounts",
+            "name": "name"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "6b125c3791331ef283413565494489c0c80ed3a984de201a7349118597c6aeaa"
+}

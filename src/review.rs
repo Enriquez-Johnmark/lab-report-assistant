@@ -16,11 +16,15 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 
 use crate::checks::{Check, check_draft, forbidden_term};
+use crate::delivery::{Delivery, LINK_DAYS};
 use crate::drafting::Explanation;
 use crate::drafts::{DRAFT_JOB, DraftId, NewDraft, Source, content_hash, store};
 use crate::engine::accounts::{MemberError, MemberId, Members, Session};
 use crate::engine::clock::Clock;
+use crate::engine::ids::MessageId;
 use crate::engine::jobs::{JobError, Jobs};
+use crate::engine::mail::Email;
+use crate::engine::outbox::{ContentHash, NoExtraChecks, Outbox, OutboxError};
 use crate::lab_reports::{ClinicId, ImportError, LabReportId, LabReports};
 
 /// Most drafts the model writes for one lab report (C6).
@@ -57,6 +61,9 @@ pub enum ReviewError {
     /// The lab report couldn't be read.
     #[error(transparent)]
     Report(#[from] ImportError),
+    /// The outbox refused the notice.
+    #[error(transparent)]
+    Outbox(#[from] OutboxError),
     /// The database failed.
     #[error(transparent)]
     Database(#[from] sqlx::Error),
@@ -104,12 +111,25 @@ pub struct AuditEntry {
 pub struct Reviews {
     pool: PgPool,
     clock: Arc<dyn Clock>,
+    delivery: Option<Delivery>,
 }
 
 impl Reviews {
     /// Reviews in `pool`.
     pub fn new(pool: PgPool, clock: Arc<dyn Clock>) -> Self {
-        Self { pool, clock }
+        Self {
+            pool,
+            clock,
+            delivery: None,
+        }
+    }
+
+    /// Reviews whose approvals deliver the report to the patient (D1). Without
+    /// it, an approval is only recorded.
+    #[must_use]
+    pub fn with_delivery(mut self, delivery: Delivery) -> Self {
+        self.delivery = Some(delivery);
+        self
     }
 
     /// Adds a physician to the clinic, as a staff member who may approve.
@@ -223,8 +243,88 @@ impl Reviews {
             details,
         )
         .await?;
+        let notice = match &self.delivery {
+            Some(delivery) => self.queue_notice(&mut tx, delivery, clinic, report, draft, now).await?,
+            None => None,
+        };
         tx.commit().await?;
+        // The engine approves the notice in its own transaction; if this is
+        // interrupted, the delivery sweep approves it (ADR 0001).
+        if let Some((message, email)) = notice {
+            Outbox::new(self.pool.clone(), self.clock.clone())
+                .approve(clinic, message, &who.email, &ContentHash::of(&email), &NoExtraChecks)
+                .await?;
+        }
         Ok(())
+    }
+
+    /// Stores the notice for the approved draft in the outbox, with its
+    /// delivery, inside the approval's transaction (D1). A patient with no
+    /// email address gets none, and the log says so.
+    async fn queue_notice(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        delivery: &Delivery,
+        clinic: ClinicId,
+        report: LabReportId,
+        draft: DraftId,
+        now: OffsetDateTime,
+    ) -> Result<Option<(MessageId, Email)>, ReviewError> {
+        let to = sqlx::query!(
+            "select p.email, a.name as clinic_name from lab_reports r
+             join patients p on p.tenant_id = r.tenant_id and p.id = r.patient_id
+             join accounts a on a.tenant_id = r.tenant_id
+             where r.tenant_id = $1 and r.id = $2",
+            clinic.as_uuid(),
+            report.as_uuid(),
+        )
+        .fetch_one(&mut **tx)
+        .await?;
+        let actor = crate::engine::audit::SYSTEM;
+        let Some(address) = to.email else {
+            let details = json!({ "reason": "the patient has no email address" });
+            crate::audit::record(
+                &mut **tx,
+                clinic,
+                now,
+                actor,
+                "lab_report.not_delivered",
+                report,
+                details,
+            )
+            .await?;
+            return Ok(None);
+        };
+        let id = uuid::Uuid::now_v7();
+        let email = delivery.notice(&to.clinic_name, &address, id);
+        let message = Outbox::new(self.pool.clone(), self.clock.clone())
+            .create_draft_in(tx, clinic, &email, None)
+            .await?;
+        sqlx::query!(
+            "insert into deliveries (id, tenant_id, lab_report_id, draft_id, message_id, created_at, expires_at)
+             values ($1, $2, $3, $4, $5, $6, $7)",
+            id,
+            clinic.as_uuid(),
+            report.as_uuid(),
+            draft.as_uuid(),
+            message.as_uuid(),
+            now,
+            now + time::Duration::days(LINK_DAYS),
+        )
+        .execute(&mut **tx)
+        .await?;
+        let details = json!({ "delivery_id": id, "draft_id": draft });
+        crate::audit::record(
+            &mut **tx,
+            clinic,
+            now,
+            actor,
+            "lab_report.notice_queued",
+            report,
+            details,
+        )
+        .await?;
+        Ok(Some((message, email)))
     }
 
     /// The approval that counts for `report`: of its latest draft, whose text
