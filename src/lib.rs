@@ -9,6 +9,7 @@ pub mod evidence;
 pub mod fhir;
 pub mod lab_reports;
 pub mod made_up;
+pub mod model;
 
 /// The engine, Nudgewright, pinned to a release.
 pub use nudgewright as engine;
