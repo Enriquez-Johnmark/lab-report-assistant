@@ -677,9 +677,15 @@ async fn load_demo_data(
     State(state): State<AppState>,
     ApiMember(member): ApiMember,
 ) -> Result<Json<DemoDataLoaded>, ApiError> {
+    if member.role != Role::Owner {
+        return Err(ApiError::Refused(
+            StatusCode::FORBIDDEN,
+            "Only the administrator can load the demo data.".into(),
+        ));
+    }
     let (mut imported, mut already_there) = (0, 0);
     for file in demo_data::generate() {
-        match state.reports.import(member.tenant, &file.json).await {
+        match state.reports.import_as(member.tenant, &file.json, &member.email).await {
             Ok(_) => imported += 1,
             Err(ImportError::AlreadyImported(_)) => already_there += 1,
             Err(err) => return Err(ApiError::internal(err)),

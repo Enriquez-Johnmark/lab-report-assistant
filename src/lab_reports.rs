@@ -139,8 +139,14 @@ impl LabReports {
         Self { pool, clock }
     }
 
-    /// Imports the lab report in `json` into `clinic`, all of it or none.
+    /// Imports the lab report in `json` into `clinic`, all of it or none,
+    /// logged as done by the system (the import command).
     pub async fn import(&self, clinic: ClinicId, json: &str) -> Result<LabReportId, ImportError> {
+        self.import_as(clinic, json, crate::engine::audit::SYSTEM).await
+    }
+
+    /// Imports as [`Self::import`] does, logged as done by `actor`.
+    pub async fn import_as(&self, clinic: ClinicId, json: &str, actor: &str) -> Result<LabReportId, ImportError> {
         let report = read_lab_report(json)?;
         let now = self.clock.now();
         let mut tx = self.pool.begin().await?;
@@ -223,7 +229,7 @@ impl LabReports {
             &mut *tx,
             clinic,
             now,
-            crate::engine::audit::SYSTEM,
+            actor,
             "lab_report.imported",
             id,
             serde_json::json!({ "fhir_id": report.fhir_id, "results": report.results.len() }),

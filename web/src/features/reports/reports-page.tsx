@@ -55,7 +55,7 @@ export function ReportsPage() {
             : "Each lab report, its draft and where it stands. Only a physician can approve."
         }
       >
-        {reports.data?.length ? loadDemo : null}
+        {reports.data?.length && me.data?.role === "administrator" ? loadDemo : null}
       </PageHeader>
       {demo.isError ? <SaveError error={demo.error} /> : null}
       {demo.isSuccess && demo.data.imported === 0 ? (
@@ -76,7 +76,7 @@ export function ReportsPage() {
               line.
             </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent>{loadDemo}</EmptyContent>
+          {me.data?.role === "administrator" ? <EmptyContent>{loadDemo}</EmptyContent> : null}
         </Empty>
       ) : (
         <Table>

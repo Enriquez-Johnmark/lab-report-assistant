@@ -154,3 +154,18 @@ async fn e3_only_the_administrator_reads_the_clinic_wide_activity(pool: PgPool) 
     assert_eq!(for_admin.body.as_array().unwrap().len(), 30);
     assert_eq!(for_doctor.status, 403);
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn e1_the_demo_data_is_logged_as_imported_by_the_administrator_and_only_they_may_load_it(pool: PgPool) {
+    let (app, doctor, _) = reviewed(&pool, Fake(Ok)).await;
+
+    let refused = call(&app, "POST", "/api/demo-data", None, Some(&doctor)).await;
+
+    assert_eq!(refused.status, 403);
+    let actors: Vec<String> =
+        sqlx::query_scalar("select distinct actor from audit_events where action = 'lab_report.imported'")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(actors, ["admin@example.test"]);
+}
