@@ -196,3 +196,28 @@ fn b6_the_wording_list_names_conditions_for_every_test_the_generator_produces() 
         .collect();
     assert_eq!(missing, Vec::<&str>::new());
 }
+
+#[test]
+fn b5_a_negated_placement_is_blocked() {
+    let above = "Calcium helps bones. Yours is above the lab's range.";
+    for wrong in [
+        "Glucose is sugar in the blood. Yours is not within the lab's range.",
+        "Glucose is sugar in the blood. Yours isn't within the lab's range.",
+        "Glucose is sugar in the blood. Yours is outside the lab's range.",
+    ] {
+        assert_eq!(
+            direction_failures(wrong, above),
+            [(Check::Direction, Some("r1".into()))],
+            "{wrong}"
+        );
+    }
+}
+
+#[test]
+fn b5_high_density_and_low_density_name_a_cholesterol_not_a_direction() {
+    let failures = direction_failures(
+        "HDL, or high-density lipoprotein, carries cholesterol away. Yours is within the lab's range.",
+        "LDL, or low-density lipoprotein, can build up. Yours is above the lab's range.",
+    );
+    assert_eq!(failures, []);
+}

@@ -99,6 +99,10 @@ pub fn check_draft(explanations: &[Explanation], results: &[StoredResult]) -> Ve
 const ABOVE: &[&str] = &["above", "high", "higher", "highest", "elevated", "raised", "increased"];
 const BELOW: &[&str] = &["below", "low", "lower", "lowest", "reduced", "decreased"];
 const WITHIN: &[&str] = &["within", "normal"];
+/// Words that turn a placement around or leave it unclear.
+const NEGATIONS: &[&str] = &[
+    "not", "isn", "aren", "wasn", "doesn", "outside", "beyond", "neither", "nor", "never",
+];
 
 /// The text's words, lowercase, split at anything that isn't a letter.
 pub(crate) fn words(text: &str) -> Vec<String> {
@@ -112,7 +116,18 @@ pub(crate) fn words(text: &str) -> Vec<String> {
 /// the lab's own side of the range (`within`, `above` or `below`) and no word
 /// for another side.
 fn direction_problem(text: &str, flag: Flag) -> Option<&'static str> {
-    let words = words(text);
+    // "High-density" and "low-density" name a kind of cholesterol, not where
+    // a value sits.
+    let all = words(text);
+    let words: Vec<&String> = all
+        .iter()
+        .enumerate()
+        .filter(|(at, _)| all.get(at + 1).is_none_or(|next| next != "density"))
+        .map(|(_, word)| word)
+        .collect();
+    if words.iter().any(|word| NEGATIONS.contains(&word.as_str())) {
+        return Some("the text negates or blurs where the value sits; it must say within, above or below plainly");
+    }
     let says = |list: &[&str]| words.iter().any(|word| list.contains(&word.as_str()));
     let (side, others): (&str, [&[&str]; 2]) = match flag {
         Flag::Normal => ("within", [ABOVE, BELOW]),
@@ -121,7 +136,7 @@ fn direction_problem(text: &str, flag: Flag) -> Option<&'static str> {
     };
     if others.iter().any(|list| says(list)) {
         Some("the text puts the value on another side of the lab's range than the lab does")
-    } else if !words.iter().any(|word| word == side) {
+    } else if !words.iter().any(|word| word.as_str() == side) {
         Some("the text doesn't say where the value sits against the lab's range")
     } else {
         None
