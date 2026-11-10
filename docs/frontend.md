@@ -1,6 +1,12 @@
 # Frontend
 
-Status: the skills are in place (2026-11-10). The conventions for `web/` are written when it is created in M3, starting from Kompleto's `docs/frontend.md`.
+Status: `web/` created in M3 (2026-11-10) as a copy of Balanse's web shell, which follows Kompleto's `docs/frontend.md`; its principles, stack, folder layout and conventions apply here unchanged, with these differences:
+
+- **Rust decides; React shows.** Who may approve, what blocks a draft and how many new drafts are left are the API's; the pages only show what it returns and ask it to act.
+- **Values come from the lab data.** The results table shows the API's `results`, never text from a draft.
+- **Dates** are shown in the viewer's own time zone.
+- **shadcn command line:** `pnpm dlx shadcn@4.22.1 … -c web`, the same pinned version as Kompleto.
+- **Browser tests** (`pnpm e2e`) run against a server with one clinic, its administrator and a physician; CI sets them up.
 
 Before writing or reviewing React, read the skills in `.claude/skills/`:
 
