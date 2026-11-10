@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table"
 import { formatDateTime } from "@/lib/dates"
 import { actionChoices, actionLabel } from "@/lib/labels"
+import { useReports } from "@/features/reports/queries"
 
 /** E3: the clinic's audit log, newest first, for the administrator; the
  *  filters live in the address so a filtered view can be shared. */
@@ -31,6 +32,12 @@ export function ActivityPage() {
     queryFn: () =>
       api<AuditView[]>("GET", `/api/activity?${new URLSearchParams({ actor, action }).toString()}`),
   })
+  // Each entry names its report by patient and test, from the clinic's list.
+  const reports = useReports()
+  const reportName = (id: string) => {
+    const report = reports.data?.find((r) => r.id === id)
+    return report ? `${report.patient_name} · ${report.name}` : "Open the report"
+  }
   const setFilter = (name: string, value: string) =>
     setParams((old) => {
       const next = new URLSearchParams(old)
@@ -84,6 +91,10 @@ export function ActivityPage() {
         <Skeleton className="h-64 w-full" />
       ) : activity.isError ? (
         <QueryError error={activity.error} />
+      ) : activity.data.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {actor || action ? "Nothing matches these filters." : "Nothing has happened yet."}
+        </p>
       ) : (
         <Table>
           <TableHeader>
@@ -105,9 +116,9 @@ export function ActivityPage() {
                 <TableCell>
                   <Link
                     to={`/reports/${entry.lab_report}`}
-                    className="underline underline-offset-4"
+                    className="underline-offset-4 hover:underline"
                   >
-                    Open
+                    {reportName(entry.lab_report)}
                   </Link>
                 </TableCell>
               </TableRow>
