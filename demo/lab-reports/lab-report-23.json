@@ -1,0 +1,696 @@
+{
+  "entry": [
+    {
+      "resource": {
+        "birthDate": "1990-04-10",
+        "gender": "female",
+        "id": "patient-03",
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "name": [
+          {
+            "family": "Bautista",
+            "given": [
+              "Carmen"
+            ],
+            "text": "Carmen Bautista (made up)"
+          }
+        ],
+        "resourceType": "Patient",
+        "telecom": [
+          {
+            "system": "email",
+            "value": "carmen.bautista@example.test"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "LAB",
+                "system": "http://terminology.hl7.org/CodeSystem/v2-0074"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "hormones",
+              "display": "Hormone panel",
+              "system": "http://example.test/example-labs/panels"
+            }
+          ],
+          "text": "Hormone panel"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "report-23",
+        "issued": "2026-10-24T14:00:00Z",
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "performer": [
+          {
+            "display": "Example Labs (made up)"
+          }
+        ],
+        "resourceType": "DiagnosticReport",
+        "result": [
+          {
+            "reference": "Observation/obs-23-01"
+          },
+          {
+            "reference": "Observation/obs-23-02"
+          },
+          {
+            "reference": "Observation/obs-23-03"
+          },
+          {
+            "reference": "Observation/obs-23-04"
+          },
+          {
+            "reference": "Observation/obs-23-05"
+          },
+          {
+            "reference": "Observation/obs-23-06"
+          },
+          {
+            "reference": "Observation/obs-23-07"
+          },
+          {
+            "reference": "Observation/obs-23-08"
+          }
+        ],
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "2986-8",
+              "display": "Testosterone, total",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Testosterone, total"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-01",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "ng/dL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ng/dL",
+              "value": 60.0
+            },
+            "low": {
+              "code": "ng/dL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ng/dL",
+              "value": 8.0
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "ng/dL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "ng/dL",
+          "value": 22.0
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "13967-5",
+              "display": "Sex hormone binding globulin (SHBG)",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Sex hormone binding globulin (SHBG)"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-02",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "nmol/L",
+              "system": "http://unitsofmeasure.org",
+              "unit": "nmol/L",
+              "value": 120.0
+            },
+            "low": {
+              "code": "nmol/L",
+              "system": "http://unitsofmeasure.org",
+              "unit": "nmol/L",
+              "value": 25.0
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "nmol/L",
+          "system": "http://unitsofmeasure.org",
+          "unit": "nmol/L",
+          "value": 82.0
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "2243-4",
+              "display": "Estradiol",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Estradiol"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-03",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "pg/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "pg/mL",
+              "value": 400.0
+            },
+            "low": {
+              "code": "pg/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "pg/mL",
+              "value": 30.0
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "pg/mL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "pg/mL",
+          "value": 320.0
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "15067-2",
+              "display": "FSH",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "FSH"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-04",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "m[IU]/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "mIU/mL",
+              "value": 12.5
+            },
+            "low": {
+              "code": "m[IU]/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "mIU/mL",
+              "value": 3.5
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "m[IU]/mL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "mIU/mL",
+          "value": 9.4
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "10501-5",
+              "display": "LH",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "LH"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-05",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "m[IU]/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "mIU/mL",
+              "value": 12.6
+            },
+            "low": {
+              "code": "m[IU]/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "mIU/mL",
+              "value": 2.4
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "m[IU]/mL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "mIU/mL",
+          "value": 8.5
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "2842-3",
+              "display": "Prolactin",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Prolactin"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-06",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "ng/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ng/mL",
+              "value": 23.3
+            },
+            "low": {
+              "code": "ng/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ng/mL",
+              "value": 4.8
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "ng/mL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "ng/mL",
+          "value": 11.2
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "2191-5",
+              "display": "DHEA sulfate",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "DHEA sulfate"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-07",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "ug/dL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ug/dL",
+              "value": 380.0
+            },
+            "low": {
+              "code": "ug/dL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ug/dL",
+              "value": 65.0
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "ug/dL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "ug/dL",
+          "value": 298.0
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "laboratory",
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "38476-3",
+              "display": "Anti-Mullerian hormone (AMH)",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Anti-Mullerian hormone (AMH)"
+        },
+        "effectiveDateTime": "2026-10-24T09:00:00Z",
+        "id": "obs-23-08",
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "code": "N",
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "security": [
+            {
+              "code": "HTEST",
+              "display": "test health data",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+            }
+          ]
+        },
+        "referenceRange": [
+          {
+            "high": {
+              "code": "ng/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ng/mL",
+              "value": 10.0
+            },
+            "low": {
+              "code": "ng/mL",
+              "system": "http://unitsofmeasure.org",
+              "unit": "ng/mL",
+              "value": 1.0
+            }
+          }
+        ],
+        "resourceType": "Observation",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/patient-03"
+        },
+        "valueQuantity": {
+          "code": "ng/mL",
+          "system": "http://unitsofmeasure.org",
+          "unit": "ng/mL",
+          "value": 1.0
+        }
+      }
+    }
+  ],
+  "id": "lab-report-23",
+  "meta": {
+    "security": [
+      {
+        "code": "HTEST",
+        "display": "test health data",
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActReason"
+      }
+    ]
+  },
+  "resourceType": "Bundle",
+  "type": "collection"
+}

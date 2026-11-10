@@ -2,6 +2,8 @@
 //! report. The model drafts it, code checks it, a physician approves the exact
 //! text, the engine delivers the notice once, and every step is audited.
 
+pub mod demo_data;
+
 /// The engine, Nudgewright, pinned to a release.
 pub use nudgewright as engine;
 
