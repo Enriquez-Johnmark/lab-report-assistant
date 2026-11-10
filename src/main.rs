@@ -149,10 +149,11 @@ fn drafting_model() -> String {
     std::env::var("LLM_MODEL").unwrap_or_else(|_| "claude-sonnet-5-5".to_owned())
 }
 
-/// The owner's API key: `ANTHROPIC_API_KEY`, or in a cloud session
-/// `OWNER_ANTHROPIC_API_KEY` (Claude Code itself reads the first).
+/// The owner's API key: `OWNER_ANTHROPIC_API_KEY` first, then
+/// `ANTHROPIC_API_KEY`. In a cloud session Claude Code itself reads the
+/// second, so the owner's own key must win.
 fn api_key() -> Option<String> {
-    ["ANTHROPIC_API_KEY", "OWNER_ANTHROPIC_API_KEY"]
+    ["OWNER_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"]
         .iter()
         .find_map(|name| std::env::var(name).ok().filter(|key| !key.trim().is_empty()))
 }
