@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into lab_results\n                     (tenant_id, lab_report_id, position, fhir_id, code, name, value, unit, range_low, range_high, flag)\n                 values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Float8",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fe65d04cdf034ff199d3a0f8ba52b0479384050ab36d12df6223c71a3c0e3508"
+}

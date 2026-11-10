@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select r.id, r.name, p.name as patient_name, r.imported_at\n             from lab_reports r join patients p on p.tenant_id = r.tenant_id and p.id = r.patient_id\n             where r.tenant_id = $1\n             order by r.imported_at desc, r.id desc",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "lab_reports",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "lab_reports",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "patient_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "patients",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "imported_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "lab_reports",
+            "name": "imported_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a15e9f4b12b9bb42c941f95b7a1139e7729ec7541026092875dffebeb64e02a9"
+}
