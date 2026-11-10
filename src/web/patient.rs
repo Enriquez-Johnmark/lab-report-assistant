@@ -6,6 +6,10 @@
 //! the one lookup not scoped by a session. It shows the report only while
 //! the link is under [`LINK_DAYS`] days old and the approved text still
 //! stands (C3), and logs every opening (D5).
+//!
+//! Opening the link shows a "Show my report" button; only pressing it shows
+//! the report and logs the opening, so email scanners and link previews,
+//! which only fetch links, neither see the report nor count as the patient.
 
 use axum::Router;
 use axum::extract::{Path, State};
@@ -24,11 +28,19 @@ use crate::html::escape;
 use crate::lab_reports::{ClinicId, LabReportId};
 
 pub(super) fn routes() -> Router<AppState> {
-    Router::new().route("/r/{token}", get(page))
+    Router::new().route("/r/{token}", get(gate).post(page))
+}
+
+async fn gate(State(state): State<AppState>, Path(token): Path<String>) -> Response {
+    respond(open(&state, &token, false).await)
 }
 
 async fn page(State(state): State<AppState>, Path(token): Path<String>) -> Response {
-    match open(&state, &token).await {
+    respond(open(&state, &token, true).await)
+}
+
+fn respond(opened: Result<Response, sqlx::Error>) -> Response {
+    match opened {
         Ok(response) => response,
         Err(err) => {
             tracing::error!(%err, "the patient's page failed");
@@ -41,7 +53,9 @@ async fn page(State(state): State<AppState>, Path(token): Path<String>) -> Respo
     }
 }
 
-async fn open(state: &AppState, token: &str) -> Result<Response, sqlx::Error> {
+/// The page for `token`: refusals as they apply, then either the button
+/// (`show` false) or the report itself, logged as opened.
+async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sqlx::Error> {
     let not_found = || {
         message(
             StatusCode::NOT_FOUND,
@@ -101,6 +115,15 @@ async fn open(state: &AppState, token: &str) -> Result<Response, sqlx::Error> {
                 escape(&found.clinic_name)
             ),
         ));
+    }
+    if !show {
+        let body = format!(
+            "<p class=\"demo\">Made-up demo: not a real patient</p>\n<h1>Your lab report from {}</h1>\n\
+             <p>Your report is ready, reviewed by your physician.</p>\n\
+             <form method=\"post\"><button type=\"submit\">Show my report</button></form>",
+            escape(&found.clinic_name)
+        );
+        return Ok((StatusCode::OK, document("Your lab report", &body)).into_response());
     }
     let lab_report = state
         .reports
@@ -183,7 +206,8 @@ const STYLE: &str = "body{font:16px/1.5 system-ui,sans-serif;margin:0 auto;max-w
      th,td{border-bottom:1px solid #ddd;padding:.5rem;text-align:left;vertical-align:top}\
      .num{font-variant-numeric:tabular-nums;white-space:nowrap}small{color:#555}\
      @media (max-width:40rem){thead{display:none}tr{display:block;padding:.5rem 0;border-bottom:1px solid #ddd}\
-     th,td{display:block;border:0;padding:.15rem 0}}";
+     th,td{display:block;border:0;padding:.15rem 0}}\
+     button{font:inherit;font-weight:600;padding:.6rem 1.2rem;border-radius:.5rem;border:0;background:#0f6e6e;color:#fff;cursor:pointer}";
 
 /// A whole page, never cached: it holds health information.
 fn document(title: &str, body: &str) -> impl IntoResponse {

@@ -34,6 +34,7 @@ test("the physician approves a draft, the patient opens it, and an edit that lea
   const [given, family] = patient.toLowerCase().split(" ")
   const link = await linkIn(`${given}.${family}@example.test`, "/r/")
   await page.goto(new URL(link).pathname)
+  await page.getByRole("button", { name: "Show my report" }).click()
   await expect(page.getByText("Made-up demo: not a real patient")).toBeVisible()
   await expect(page.getByText(/reviewed and approved by Dr\. Example/)).toBeVisible()
   await page.goto("/sent")

@@ -75,9 +75,20 @@ impl Setup {
         (report, link.trim_start_matches(common::BASE_URL).to_owned())
     }
 
+    /// Opens the link and presses "Show my report", as the patient does.
     async fn open(&self, path: &str) -> (u16, String) {
+        self.fetch(axum::http::Request::post(path).header("origin", common::BASE_URL))
+            .await
+    }
+
+    /// Only fetches the link, as an email scanner does.
+    async fn fetch_only(&self, path: &str) -> (u16, String) {
+        self.fetch(axum::http::Request::get(path)).await
+    }
+
+    async fn fetch(&self, request: axum::http::request::Builder) -> (u16, String) {
         use tower::ServiceExt;
-        let request = axum::http::Request::get(path).body(axum::body::Body::empty()).unwrap();
+        let request = request.body(axum::body::Body::empty()).unwrap();
         let response = self.app.clone().oneshot(request).await.unwrap();
         let status = response.status().as_u16();
         let bytes = axum::body::to_bytes(response.into_body(), 1 << 20).await.unwrap();
@@ -237,4 +248,25 @@ async fn d5_the_list_shows_a_sent_report_and_whether_the_patient_opened_it(pool:
 
     assert_eq!(status_of(&sent.body), "sent");
     assert_eq!(status_of(&opened.body), "opened");
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d5_only_fetching_the_link_shows_a_button_not_the_report_and_logs_nothing(pool: PgPool) {
+    let s = setup(pool).await;
+    let (report, link) = s.approve(0).await;
+
+    let (status, page) = s.fetch_only(&link).await;
+
+    assert_eq!(status, 200);
+    assert!(page.contains("Show my report"), "{page}");
+    let first = report["draft"]["explanations"][0]["text"].as_str().unwrap();
+    assert!(
+        !page.contains(first),
+        "the report isn't shown until the button is pressed"
+    );
+    let openings: i64 = sqlx::query_scalar("select count(*) from audit_events where action = 'lab_report.opened'")
+        .fetch_one(&s.pool)
+        .await
+        .unwrap();
+    assert_eq!(openings, 0);
 }
