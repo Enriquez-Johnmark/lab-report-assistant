@@ -5,6 +5,7 @@ import type { ApproveRequest } from "@/api/generated/ApproveRequest"
 import type { AuditView } from "@/api/generated/AuditView"
 import type { DemoDataLoaded } from "@/api/generated/DemoDataLoaded"
 import type { EditOutcome } from "@/api/generated/EditOutcome"
+import type { FhirSource } from "@/api/generated/FhirSource"
 import type { LabReportDetail } from "@/api/generated/LabReportDetail"
 import type { LabReportRow } from "@/api/generated/LabReportRow"
 import type { TextRequest } from "@/api/generated/TextRequest"
@@ -69,5 +70,15 @@ export function useLoadDemoData() {
   return useMutation({
     mutationFn: () => api<DemoDataLoaded>("POST", "/api/demo-data"),
     onSettled: () => queryClient.invalidateQueries({ queryKey: reportKeys.all() }),
+  })
+}
+
+/** The FHIR file a lab report came from, loaded only when asked for. */
+export function useFhirSource(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: reportKeys.fhir(id),
+    queryFn: () => api<FhirSource>("GET", `/api/lab-reports/${id}/fhir`),
+    enabled,
+    staleTime: Infinity,
   })
 }

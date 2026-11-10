@@ -173,3 +173,23 @@ async fn e1_the_demo_data_is_logged_as_imported_by_the_administrator_and_only_th
             .unwrap();
     assert_eq!(actors, ["admin@example.test"]);
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn f2_the_clinic_sees_the_fhir_file_each_report_came_from(pool: PgPool) {
+    let (app, doctor, _) = reviewed(&pool, Fake(Ok)).await;
+    let report = first_report(&app, &doctor).await;
+    let id = report["id"].as_str().unwrap();
+
+    let source = call(&app, "GET", &format!("/api/lab-reports/{id}/fhir"), None, Some(&doctor)).await;
+
+    assert_eq!(source.status, 200);
+    let fhir: serde_json::Value = serde_json::from_str(source.body["source"].as_str().unwrap()).unwrap();
+    assert_eq!(fhir["resourceType"], "Bundle");
+    let first = &report["results"][0];
+    assert!(
+        source.body["source"]
+            .as_str()
+            .unwrap()
+            .contains(first["test"].as_str().unwrap())
+    );
+}

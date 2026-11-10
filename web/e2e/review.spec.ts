@@ -27,6 +27,9 @@ test("the physician approves a draft, the patient opens it, and an edit that lea
   await ready.first().getByRole("link").click()
   await expect(page.getByRole("button", { name: "Approve this text" })).toBeVisible()
   const patient = (await page.getByRole("heading", { level: 1 }).textContent()) ?? ""
+  // Where the values come from: the lab's FHIR file, as imported.
+  await page.getByRole("button", { name: "Show the file" }).click()
+  await expect(page.getByText('"resourceType": "DiagnosticReport"')).toBeVisible()
   await page.getByRole("button", { name: "Approve this text" }).click()
   await expect(page.getByText("This exact text was approved on")).toBeVisible()
 

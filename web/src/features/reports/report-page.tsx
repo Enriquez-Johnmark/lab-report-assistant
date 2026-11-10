@@ -24,6 +24,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { formatDateTime } from "@/lib/dates"
 import { actionLabel, flagLabel, sourceLabel } from "@/lib/labels"
+import { FhirSourceCard } from "@/features/reports/fhir-source"
 import { RejectDialog } from "@/features/reports/reject-dialog"
 import { useApprove, useReport, useSaveText, useTimeline } from "@/features/reports/queries"
 
@@ -61,6 +62,7 @@ export function ReportPage() {
           Only a physician can approve or change this report.
         </p>
       ) : null}
+      <FhirSourceCard id={id} />
       <Timeline id={id} />
     </>
   )

@@ -67,6 +67,7 @@ async fn f1_every_api_needs_a_login(pool: PgPool) {
         ("GET", "/api/lab-reports".to_owned()),
         ("GET", format!("/api/lab-reports/{some_id}")),
         ("GET", format!("/api/lab-reports/{some_id}/timeline")),
+        ("GET", format!("/api/lab-reports/{some_id}/fhir")),
         ("POST", format!("/api/lab-reports/{some_id}/approve")),
         ("POST", format!("/api/lab-reports/{some_id}/edit")),
         ("POST", format!("/api/lab-reports/{some_id}/write")),

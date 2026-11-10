@@ -37,6 +37,7 @@ pub(super) fn routes() -> Router<AppState> {
         .route("/api/lab-reports", get(list))
         .route("/api/lab-reports/{id}", get(detail))
         .route("/api/lab-reports/{id}/timeline", get(timeline))
+        .route("/api/lab-reports/{id}/fhir", get(fhir_source))
         .route("/api/lab-reports/{id}/approve", post(approve))
         .route("/api/lab-reports/{id}/edit", post(edit))
         .route("/api/lab-reports/{id}/write", post(write))
@@ -528,6 +529,26 @@ async fn timeline(
     })?;
     let entries = state.reviews.timeline(member.tenant, id).await?;
     Ok(Json(entries.into_iter().map(AuditView::from).collect()))
+}
+
+/// The FHIR file a lab report came from.
+#[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export))]
+pub struct FhirSource {
+    /// The file exactly as it was imported (untrusted text: show it as text).
+    pub source: String,
+}
+
+async fn fhir_source(
+    State(state): State<AppState>,
+    ApiMember(member): ApiMember,
+    ReportPath(id): ReportPath,
+) -> Result<Json<FhirSource>, ApiError> {
+    let source = state.reports.source(member.tenant, id).await.map_err(|err| match err {
+        ImportError::NotFound => ApiError::NotFound,
+        other => ApiError::internal(other),
+    })?;
+    Ok(Json(FhirSource { source }))
 }
 
 /// Approving the text the physician read.

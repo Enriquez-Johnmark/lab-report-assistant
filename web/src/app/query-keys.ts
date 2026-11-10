@@ -6,6 +6,7 @@ export const reportKeys = {
   list: () => [...reportKeys.all(), "list"] as const,
   detail: (id: string) => [...reportKeys.all(), "detail", id] as const,
   timeline: (id: string) => [...reportKeys.all(), "timeline", id] as const,
+  fhir: (id: string) => [...reportKeys.all(), "fhir", id] as const,
 }
 
 export const activityKeys = {
