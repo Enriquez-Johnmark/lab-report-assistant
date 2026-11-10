@@ -163,13 +163,16 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
             .find(|e| e.result == id)
             .map(|e| e.text.as_str())
             .unwrap_or("");
-        let flag = match row.flag {
-            Flag::Low => "Below the lab's range",
-            Flag::Normal => "Within the lab's range",
-            Flag::High => "Above the lab's range",
+        // Outside the range is said in words and set apart in style, never by colour alone.
+        let (flag, class, value_class) = match row.flag {
+            Flag::Low => ("Below the lab's range", "flag out", "num out"),
+            Flag::Normal => ("Within the lab's range", "flag", "num"),
+            Flag::High => ("Above the lab's range", "flag out", "num out"),
         };
         rows.push_str(&format!(
-            "<tr><th scope=\"row\">{}</th><td class=\"num\">{} {}</td><td>{}<br><small>{flag}</small></td><td>{}</td></tr>\n",
+            "<tr><th scope=\"row\">{}</th><td class=\"{value_class}\" data-label=\"Your value\">{} {}</td>\
+             <td data-label=\"The lab's range\"><span class=\"num\">{}</span> <span class=\"{class}\">{flag}</span></td>\
+             <td data-label=\"What it means\">{}</td></tr>\n",
             escape(&row.test),
             escape(&row.value),
             escape(&row.unit),
@@ -199,14 +202,20 @@ fn message(status: StatusCode, title: &str, text: &str) -> Response {
         .into_response()
 }
 
-const STYLE: &str = "body{font:16px/1.5 system-ui,sans-serif;margin:0 auto;max-width:56rem;padding:1rem;color:#1a1a1a}\
+const STYLE: &str = "body{font:16px/1.55 system-ui,sans-serif;margin:0 auto;max-width:56rem;padding:1.5rem 1rem 3rem;color:#1a1a1a}\
+     h1{font-size:1.75rem;line-height:1.2;margin:1.5rem 0 .5rem}\
      .demo{background:#fff4d6;border:1px solid #e8c86a;border-radius:.5rem;padding:.5rem .75rem;font-weight:600}\
-     .made{color:#4a4a4a}table{border-collapse:collapse;width:100%;margin:1rem 0}\
-     th,td{border-bottom:1px solid #ddd;padding:.5rem;text-align:left;vertical-align:top}\
-     .num{font-variant-numeric:tabular-nums;white-space:nowrap}small{color:#555}\
-     @media (max-width:40rem){thead{display:none}tr{display:block;padding:.5rem 0;border-bottom:1px solid #ddd}\
-     th,td{display:block;border:0;padding:.15rem 0}}\
-     button{font:inherit;font-weight:600;padding:.6rem 1.2rem;border-radius:.5rem;border:0;background:#0f6e6e;color:#fff;cursor:pointer}";
+     .made{color:#4a4a4a}table{border-collapse:collapse;width:100%;margin:1.5rem 0}\
+     th,td{border-bottom:1px solid #ddd;padding:.75rem .5rem;text-align:left;vertical-align:top}\
+     thead th{font-size:.875rem;color:#4a4a4a;font-weight:600}\
+     .num{font-variant-numeric:tabular-nums;white-space:nowrap}.out{font-weight:700}\
+     .flag{display:inline-block;margin-top:.25rem;padding:0 .5rem;border-radius:999px;background:#eef0f0;color:#333;font-size:.8125rem;white-space:nowrap}\
+     .flag.out{background:#fdecd2;color:#5c3700;font-weight:600}\
+     @media (max-width:40rem){thead{display:none}tr{display:block;padding:.75rem 0;border-bottom:1px solid #ddd}\
+     th,td{display:block;border:0;padding:.2rem 0}th{font-size:1.0625rem}\
+     td[data-label]::before{content:attr(data-label);display:block;font-size:.8125rem;color:#555;font-weight:400}}\
+     button{font:inherit;font-weight:600;padding:.6rem 1.2rem;border-radius:.5rem;border:0;background:#0f6e6e;color:#fff;cursor:pointer}\
+     button:focus-visible{outline:3px solid #7fc4c4;outline-offset:2px}";
 
 /// A whole page, never cached: it holds health information.
 fn document(title: &str, body: &str) -> impl IntoResponse {

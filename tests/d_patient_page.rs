@@ -97,6 +97,23 @@ impl Setup {
 }
 
 #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d6_each_value_is_labelled_and_one_outside_the_range_is_marked(pool: PgPool) {
+    let s = setup(pool).await;
+    let (report, link) = s.approve(0).await;
+
+    let (_, page) = s.open(&link).await;
+
+    // Labels for a phone, where the table's headings are hidden.
+    assert!(page.contains("data-label=\"Your value\""), "{page}");
+    assert!(page.contains("data-label=\"The lab's range\""), "{page}");
+    // A value outside the range is marked in words and in style, never by colour alone.
+    let rows = report["results"].as_array().unwrap();
+    let outside = rows.iter().filter(|row| row["flag"] != "normal").count();
+    assert_eq!(page.matches("class=\"flag out\"").count(), outside, "{page}");
+    assert_eq!(page.matches("class=\"flag\"").count(), rows.len() - outside, "{page}");
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
 async fn d6_the_page_shows_the_report_how_it_was_made_who_approved_it_and_the_demo_banner(pool: PgPool) {
     let s = setup(pool).await;
     let (report, link) = s.approve(0).await;
