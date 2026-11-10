@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select r.tenant_id, r.id from lab_reports r\n         where not exists (select 1 from drafts d where d.tenant_id = r.tenant_id and d.lab_report_id = r.id)\n           and not exists (select 1 from jobs j where j.kind = $1 and j.payload ->> 'lab_report_id' = r.id::text)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tenant_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "lab_reports",
+            "name": "tenant_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "lab_reports",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "20a879df7c8a817be1780b1a4a258032be70e849965b72c8b2899c3915b6041e"
+}

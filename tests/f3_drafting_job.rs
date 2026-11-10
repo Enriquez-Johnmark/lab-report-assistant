@@ -199,3 +199,21 @@ async fn g4_replaying_recordings_never_puts_the_template_in_place_of_a_missing_a
             .is_none()
     );
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn f3_a_report_whose_job_was_never_queued_is_still_drafted(pool: PgPool) {
+    let (clinic, report) = imported(&pool).await;
+    // As if queueing had failed just after the import committed.
+    sqlx::query("delete from jobs").execute(&pool).await.unwrap();
+
+    assert_eq!(run(&pool, Fake(Ok)).await, 1);
+
+    assert!(
+        Drafts::new(pool.clone())
+            .latest(clinic, report)
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(run(&pool, Fake(Ok)).await, 0, "queued once, not again");
+}

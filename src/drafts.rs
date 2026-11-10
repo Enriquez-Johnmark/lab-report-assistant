@@ -252,6 +252,26 @@ impl<M: LanguageModel> Drafter<M> {
 /// How long a worker holds a drafting job before another may take it.
 const LEASE: Duration = Duration::minutes(5);
 
+/// Queues a drafting job for every lab report that has neither a draft nor
+/// a job: the import queues one after it commits, and this catches a report
+/// whose queueing failed. A system-wide sweep; each job names its clinic.
+async fn queue_undrafted(pool: &PgPool, jobs: &Jobs, now: time::OffsetDateTime) -> Result<(), DraftError> {
+    let undrafted = sqlx::query!(
+        "select r.tenant_id, r.id from lab_reports r
+         where not exists (select 1 from drafts d where d.tenant_id = r.tenant_id and d.lab_report_id = r.id)
+           and not exists (select 1 from jobs j where j.kind = $1 and j.payload ->> 'lab_report_id' = r.id::text)",
+        DRAFT_JOB,
+    )
+    .fetch_all(pool)
+    .await?;
+    for report in undrafted {
+        let payload = json!({ "lab_report_id": report.id });
+        jobs.enqueue(DRAFT_JOB, &payload, Some(report.tenant_id.into()), now)
+            .await?;
+    }
+    Ok(())
+}
+
 /// How many times a drafting job is tried, so a failing one never calls the
 /// model without end.
 pub const MAX_ATTEMPTS: i32 = 3;
@@ -260,6 +280,7 @@ pub const MAX_ATTEMPTS: i32 = 3;
 /// tried again a lease later, at most [`MAX_ATTEMPTS`] times in all; a job
 /// whose lab report has gone is given up on at once.
 pub async fn work<M: LanguageModel>(jobs: &Jobs, drafter: &Drafter<M>) -> Result<usize, DraftError> {
+    queue_undrafted(&drafter.pool, jobs, drafter.clock.now()).await?;
     let mut ran = 0;
     while let Some(job) = jobs.claim(LEASE).await? {
         ran += 1;
