@@ -83,6 +83,16 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
         <Badge variant="outline">Draft {draft.attempt}</Badge>
         <span>{sourceLabel(draft.source)}</span>
       </div>
+      {draft.rejected ? (
+        <Alert>
+          <Spinner />
+          <AlertTitle>A new draft is being written</AlertTitle>
+          <AlertDescription>
+            You asked for a new draft. This one can't be approved; the new one appears here when
+            it's ready.
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {report.approved_at ? (
         <Alert>
           <CircleCheckIcon />
@@ -239,7 +249,7 @@ function Actions({
     <div className="flex flex-col gap-3">
       {approve.isError ? <SaveError error={approve.error} /> : null}
       <div className="flex flex-wrap gap-2">
-        {draft && !draft.blocked && !report.approved_at ? (
+        {draft && !draft.blocked && !draft.rejected && !report.approved_at ? (
           <Button
             onClick={() => approve.mutate({ draft_id: draft.id, content_hash: draft.content_hash })}
             disabled={approve.isPending}
@@ -256,7 +266,9 @@ function Actions({
         <Button variant="outline" onClick={() => onEdit("write")}>
           Write by hand
         </Button>
-        {draft ? <RejectDialog id={report.id} draftsLeft={report.new_drafts_left} /> : null}
+        {draft && !draft.rejected ? (
+          <RejectDialog id={report.id} draftsLeft={report.new_drafts_left} />
+        ) : null}
       </div>
     </div>
   )

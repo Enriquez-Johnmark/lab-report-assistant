@@ -38,6 +38,10 @@ pub enum ReviewError {
     /// The text isn't the one the approval names, or a newer draft exists (C3).
     #[error("the report changed since you read it; review the latest text")]
     Changed,
+    /// A new draft was asked for and isn't written yet, so this one can't be
+    /// approved or rejected again (C6).
+    #[error("a new draft is being written; wait for it")]
+    Rejected,
     /// The model has written its last draft (C6).
     #[error("no more new drafts for this report; write it by hand")]
     NoMoreDrafts,
@@ -171,7 +175,7 @@ impl Reviews {
         .await?
         .ok_or(ReviewError::NotFound)?;
         let latest = sqlx::query!(
-            "select id, explanations, blocked from drafts where tenant_id = $1 and lab_report_id = $2
+            "select id, explanations, blocked, rejected_at from drafts where tenant_id = $1 and lab_report_id = $2
              order by attempt desc limit 1",
             clinic.as_uuid(),
             report.as_uuid(),
@@ -183,6 +187,9 @@ impl Reviews {
             serde_json::from_value(latest.explanations).map_err(|err| sqlx::Error::Decode(err.into()))?;
         if latest.id != draft.as_uuid() || content_hash(&explanations) != hash {
             return Err(ReviewError::Changed);
+        }
+        if latest.rejected_at.is_some() {
+            return Err(ReviewError::Rejected);
         }
         if latest.blocked {
             return Err(ReviewError::Blocked);
@@ -335,6 +342,19 @@ impl Reviews {
         .fetch_optional(&mut *tx)
         .await?
         .ok_or(ReviewError::NotFound)?;
+        // Only a draft that is there and not already rejected can be: so at
+        // most one new draft is ever being written.
+        let latest = sqlx::query!(
+            "select id, rejected_at from drafts where tenant_id = $1 and lab_report_id = $2
+             order by attempt desc limit 1",
+            clinic.as_uuid(),
+            report.as_uuid(),
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+        let Some(latest) = latest.filter(|draft| draft.rejected_at.is_none()) else {
+            return Err(ReviewError::Rejected);
+        };
         let written = sqlx::query_scalar!(
             r#"select count(*) as "count!" from drafts where tenant_id = $1 and lab_report_id = $2 and source <> 'physician'"#,
             clinic.as_uuid(),
@@ -346,6 +366,14 @@ impl Reviews {
             return Err(ReviewError::NoMoreDrafts);
         }
         let now = self.clock.now();
+        sqlx::query!(
+            "update drafts set rejected_at = $3 where tenant_id = $1 and id = $2",
+            clinic.as_uuid(),
+            latest.id,
+            now,
+        )
+        .execute(&mut *tx)
+        .await?;
         crate::audit::record(
             &mut *tx,
             clinic,

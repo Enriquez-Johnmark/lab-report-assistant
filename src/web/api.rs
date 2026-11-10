@@ -116,6 +116,10 @@ impl From<ReviewError> for ApiError {
                 StatusCode::CONFLICT,
                 "The report changed since you opened it. Read the latest text before approving.".into(),
             ),
+            ReviewError::Rejected => Self::Refused(
+                StatusCode::CONFLICT,
+                "A new draft is being written for this report. Wait for it, then review it.".into(),
+            ),
             ReviewError::NoMoreDrafts => Self::Refused(
                 StatusCode::CONFLICT,
                 "No more new drafts for this report. Write it by hand instead.".into(),
@@ -313,6 +317,7 @@ async fn list(
         let status = match (&draft, approved) {
             (_, true) => "approved",
             (None, _) => "drafting",
+            (Some(draft), _) if draft.rejected => "drafting",
             (Some(draft), _) if draft.blocked => "blocked",
             (Some(_), _) => "waiting",
         };
@@ -382,6 +387,8 @@ pub struct DraftView {
     pub warnings: Vec<String>,
     /// Whether a failed check blocks it.
     pub blocked: bool,
+    /// Whether the physician asked for a new draft, which is being written.
+    pub rejected: bool,
     /// The fingerprint of its exact text, which an approval names (C3).
     pub content_hash: String,
 }
@@ -457,6 +464,7 @@ async fn detail(
         failures: draft.failures.iter().map(ToString::to_string).collect(),
         warnings: draft.warnings,
         blocked: draft.blocked,
+        rejected: draft.rejected,
     });
     Ok(Json(LabReportDetail {
         id: id.to_string(),

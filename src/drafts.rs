@@ -74,6 +74,8 @@ pub struct StoredDraft {
     pub blocked: bool,
     /// Warnings shown to the physician that don't block it (C5).
     pub warnings: Vec<String>,
+    /// Whether the physician rejected it and a new draft is being written.
+    pub rejected: bool,
 }
 
 /// Drafting errors.
@@ -123,7 +125,7 @@ impl Drafts {
     /// The lab report's latest draft, if it has one.
     pub async fn latest(&self, clinic: ClinicId, report: LabReportId) -> Result<Option<StoredDraft>, DraftError> {
         let Some(row) = sqlx::query!(
-            "select id, attempt, source, explanations, failures, blocked, warnings from drafts
+            "select id, attempt, source, explanations, failures, blocked, warnings, rejected_at from drafts
              where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
             clinic.as_uuid(),
             report.as_uuid(),
@@ -141,6 +143,7 @@ impl Drafts {
             failures: serde_json::from_value(row.failures)?,
             blocked: row.blocked,
             warnings: serde_json::from_value(row.warnings)?,
+            rejected: row.rejected_at.is_some(),
         }))
     }
 }
@@ -184,6 +187,20 @@ impl<M: LanguageModel> Drafter<M> {
     /// stands in only on the `last` attempt, if allowed; otherwise the error
     /// is returned so the job is tried again.
     async fn draft_attempt(&self, clinic: ClinicId, report: LabReportId, last: bool) -> Result<DraftId, DraftError> {
+        // A job asks for a draft only when there is none, or the latest was
+        // rejected. Anything else, such as text the physician wrote since,
+        // stands, and the model isn't called.
+        let latest = sqlx::query!(
+            "select id, rejected_at from drafts where tenant_id = $1 and lab_report_id = $2
+             order by attempt desc limit 1",
+            clinic.as_uuid(),
+            report.as_uuid(),
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        if let Some(latest) = latest.filter(|draft| draft.rejected_at.is_none()) {
+            return Ok(latest.id.into());
+        }
         let lab_report = self.reports.get(clinic, report).await?;
         let results = &lab_report.results;
         let (source, model, explanations, failures) = match &self.model {

@@ -283,3 +283,53 @@ async fn c4_an_edit_with_a_blank_explanation_cannot_be_approved(pool: PgPool) {
         Err(ReviewError::Blocked)
     ));
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn c6_a_rejected_draft_cannot_be_approved_while_the_new_one_is_written(pool: PgPool) {
+    let s = setup(pool, Fake(Ok)).await;
+
+    s.reviews()
+        .reject(&s.physician, s.report, "Too technical")
+        .await
+        .unwrap();
+
+    assert!(matches!(
+        s.approve_latest(&s.physician).await,
+        Err(ReviewError::Rejected)
+    ));
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn c6_rejecting_again_before_the_new_draft_arrives_is_refused(pool: PgPool) {
+    let s = setup(pool, Fake(Ok)).await;
+    s.reviews()
+        .reject(&s.physician, s.report, "Too technical")
+        .await
+        .unwrap();
+
+    let again = s.reviews().reject(&s.physician, s.report, "Still waiting").await;
+
+    assert!(matches!(again, Err(ReviewError::Rejected)));
+    let queued: i64 = sqlx::query_scalar("select count(*) from jobs where status = 'queued'")
+        .fetch_one(&s.pool)
+        .await
+        .unwrap();
+    assert_eq!(queued, 1, "one new draft asked for, not two");
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn c7_a_new_draft_never_replaces_text_the_physician_wrote_meanwhile(pool: PgPool) {
+    let s = setup(pool, Fake(Ok)).await;
+    s.reviews()
+        .reject(&s.physician, s.report, "Too technical")
+        .await
+        .unwrap();
+    s.reviews()
+        .write_by_hand(&s.physician, s.report, explanations(8))
+        .await
+        .unwrap();
+
+    draft_now(&s.pool, s.clock.clone(), Fake(Ok)).await;
+
+    assert_eq!(s.latest().await.source, Source::Physician);
+}

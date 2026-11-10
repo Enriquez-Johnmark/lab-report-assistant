@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select id, name, email, created_at from account_signup_requests\n             where created_at >= $1 order by created_at, id",
+  "query": "select id, explanations, blocked, rejected_at from drafts where tenant_id = $1 and lab_report_id = $2\n             order by attempt desc limit 1",
   "describe": {
     "columns": [
       {
@@ -9,56 +9,57 @@
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "account_signup_requests",
+            "table": "drafts",
             "name": "id"
           }
         }
       },
       {
         "ordinal": 1,
-        "name": "name",
-        "type_info": "Text",
+        "name": "explanations",
+        "type_info": "Jsonb",
         "origin": {
           "Table": {
-            "table": "account_signup_requests",
-            "name": "name"
+            "table": "drafts",
+            "name": "explanations"
           }
         }
       },
       {
         "ordinal": 2,
-        "name": "email",
-        "type_info": "Text",
+        "name": "blocked",
+        "type_info": "Bool",
         "origin": {
           "Table": {
-            "table": "account_signup_requests",
-            "name": "email"
+            "table": "drafts",
+            "name": "blocked"
           }
         }
       },
       {
         "ordinal": 3,
-        "name": "created_at",
+        "name": "rejected_at",
         "type_info": "Timestamptz",
         "origin": {
           "Table": {
-            "table": "account_signup_requests",
-            "name": "created_at"
+            "table": "drafts",
+            "name": "rejected_at"
           }
         }
       }
     ],
     "parameters": {
       "Left": [
-        "Timestamptz"
+        "Uuid",
+        "Uuid"
       ]
     },
     "nullable": [
       false,
       false,
       false,
-      false
+      true
     ]
   },
-  "hash": "3e82106ec6a48e9910d3007308286c52afed28a3c20c02dffd39b0ea4903d28f"
+  "hash": "a7c2ada820f135d324407229e920c90bae9805b97ea0bf431b26ce6cf31449d0"
 }

@@ -24,7 +24,11 @@ export function useReport(id: string) {
   return useQuery({
     queryKey: reportKeys.detail(id),
     queryFn: () => api<LabReportDetail>("GET", `/api/lab-reports/${id}`),
-    refetchInterval: (query) => (query.state.data && !query.state.data.draft ? 5000 : false),
+    // Poll while a draft, or a new one asked for, is being written.
+    refetchInterval: (query) => {
+      const draft = query.state.data?.draft
+      return query.state.data && (!draft || draft.rejected) ? 5000 : false
+    },
   })
 }
 

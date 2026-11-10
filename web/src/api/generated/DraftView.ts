@@ -34,6 +34,10 @@ warnings: Array<string>,
  */
 blocked: boolean, 
 /**
+ * Whether the physician asked for a new draft, which is being written.
+ */
+rejected: boolean, 
+/**
  * The fingerprint of its exact text, which an approval names (C3).
  */
 content_hash: string, };

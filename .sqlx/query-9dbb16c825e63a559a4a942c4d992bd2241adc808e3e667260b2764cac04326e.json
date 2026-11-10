@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select id, attempt, source, explanations, failures, blocked, warnings from drafts\n             where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
+  "query": "select id, attempt, source, explanations, failures, blocked, warnings, rejected_at from drafts\n             where tenant_id = $1 and lab_report_id = $2 order by attempt desc limit 1",
   "describe": {
     "columns": [
       {
@@ -79,6 +79,17 @@
             "name": "warnings"
           }
         }
+      },
+      {
+        "ordinal": 7,
+        "name": "rejected_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "rejected_at"
+          }
+        }
       }
     ],
     "parameters": {
@@ -94,8 +105,9 @@
       false,
       false,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "1d6557a061a70f12752026dbf27658f486190bd0d9fb8f3038e577f47f40743c"
+  "hash": "9dbb16c825e63a559a4a942c4d992bd2241adc808e3e667260b2764cac04326e"
 }
