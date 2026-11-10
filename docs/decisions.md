@@ -8,3 +8,5 @@ Every decision the owner made, dated.
 - **Generic:** no real company is named; the demos use a made-up clinic and made-up patients.
 - **Languages:** the lab report assistant and the reminders in Rust on Nudgewright; the message assistant in TypeScript; the record-access audit in Python. The pages are React and TypeScript throughout.
 - **Working name:** Lab Report Assistant (repository `lab-report-assistant`).
+- **Brief:** approved (`docs/product/brief.md`), with a made-up clinic, **Example Women's Health**; lab tests: a metabolic panel, cholesterol, HbA1c, thyroid and a few hormone tests.
+- **Licence:** all rights reserved, like Kompleto and Balanse, so it can be offered to a company on the owner's terms.

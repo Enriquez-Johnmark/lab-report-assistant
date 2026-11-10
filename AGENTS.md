@@ -11,8 +11,8 @@ Each gate needs the owner's explicit "yes"; an approval for one phase never carr
 | Phase | Status |
 | --- | --- |
 | 1. Research | done (`docs/research/README.md`) |
-| 2. Brief | **draft, waiting for the owner** (`docs/product/brief.md`) |
-| 3. Spec & acceptance criteria | not started |
+| 2. Brief | done, approved 2026-11-10 (`docs/product/brief.md`) |
+| 3. Spec & acceptance criteria | **in progress** (`docs/product/spec.md`) |
 | 4. Architecture | not started |
 | 5. Build | not started |
 

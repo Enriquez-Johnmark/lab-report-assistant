@@ -1,6 +1,6 @@
 # Brief: Lab Report Assistant
 
-Status: **draft, waiting for the owner's approval** (2026-11-10). Once approved, the spec (`spec.md`) is decided round by round from it. "Lab Report Assistant" is a working name.
+Status: **approved by the owner** (2026-11-10). The spec (`spec.md`) is decided round by round from it. "Lab Report Assistant" is a working name.
 
 ## In one sentence
 
@@ -67,8 +67,8 @@ A model can draft that explanation, but published studies show models get refere
 
 PDF reports, connecting to a live record system, patient replies, scheduling, payments, a mobile app, languages other than English, several clinics at once.
 
-## Open questions for the spec
+## Decided with the brief (2026-11-10)
 
-- The made-up clinic's name (it must not resemble a real clinic).
-- Which lab panels to cover (proposed: metabolic panel, lipids, HbA1c, thyroid, and a few hormone tests).
-- The licence: all rights reserved like Kompleto and Balanse, AGPL-3.0-only like Nudgewright, or MIT like Help Assistant.
+- **The made-up clinic:** Example Women's Health.
+- **Lab tests:** a metabolic panel, cholesterol, HbA1c, thyroid and a few hormone tests.
+- **Licence:** all rights reserved, like Kompleto and Balanse; the engine, Nudgewright, stays AGPL-3.0-only.
