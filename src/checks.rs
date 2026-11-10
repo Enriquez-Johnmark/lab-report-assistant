@@ -2,6 +2,7 @@
 //! (B2–B6). Each failure names the check and the result it concerns (B8).
 
 use std::fmt;
+use std::sync::LazyLock;
 
 use crate::drafting::{Explanation, result_id};
 use crate::fhir::Flag;
@@ -20,6 +21,8 @@ pub enum Check {
     /// The text puts the value on the wrong side of the range, or nowhere
     /// (B5).
     Direction,
+    /// The text uses diagnosis, treatment or medication wording (B6).
+    Wording,
 }
 
 /// One failed check.
@@ -82,6 +85,10 @@ pub fn check_draft(explanations: &[Explanation], results: &[StoredResult]) -> Ve
         if let Some(problem) = direction_problem(&explanation.text, result.flag) {
             failures.push(failure(Check::Direction, &explanation.result, Some(result), problem));
         }
+        if let Some(term) = forbidden_term(&explanation.text) {
+            let detail = format!("uses diagnosis, treatment or medication wording: \"{term}\"");
+            failures.push(failure(Check::Wording, &explanation.result, Some(result), &detail));
+        }
     }
     failures
 }
@@ -117,6 +124,34 @@ fn direction_problem(text: &str, flag: Flag) -> Option<&'static str> {
     } else {
         None
     }
+}
+
+/// The wording list (`wording.txt`): each line's label and its terms, each
+/// term as its words.
+static WORDING: LazyLock<Vec<(String, Vec<Vec<String>>)>> = LazyLock::new(|| {
+    include_str!("wording.txt")
+        .lines()
+        .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
+        .filter_map(|line| line.split_once(':'))
+        .map(|(label, terms)| (label.trim().to_owned(), terms.split(',').map(words).collect()))
+        .collect()
+});
+
+/// The conditions the wording list names for the test with `code`.
+pub fn conditions_for(code: &str) -> Vec<String> {
+    WORDING
+        .iter()
+        .filter(|(label, _)| label == code)
+        .flat_map(|(_, terms)| terms.iter().map(|term| term.join(" ")))
+        .collect()
+}
+
+/// The first term from the wording list that the text uses, as whole words.
+pub fn forbidden_term(text: &str) -> Option<String> {
+    let words = words(text);
+    WORDING.iter().flat_map(|(_, terms)| terms).find_map(|term| {
+        (!term.is_empty() && words.windows(term.len()).any(|window| window == term.as_slice())).then(|| term.join(" "))
+    })
 }
 
 fn failure(check: Check, id: &str, result: Option<&StoredResult>, detail: &str) -> Failure {

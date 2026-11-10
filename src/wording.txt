@@ -1,0 +1,40 @@
+# Wording a model draft may not use (B6), matched as whole words, ignoring
+# case. One term per entry; a term of several words matches those words in a
+# row. Lines starting with a test's code list the conditions that test is
+# about; a test checks every test the generator produces has a line.
+
+# Saying what a result means for the patient
+phrases: you have, you may have, you might have, this means, means you, suggests, indicates, indicating, sign of, signs of, risk, at risk, diagnosis, diagnose, diagnosed, diagnostic, you should, make sure, try to, worry, worried, nothing to worry, concerning, dangerous, serious
+
+# Treatment and advice
+treatment: treatment, treat, treated, treating, therapy, medication, medications, medicine, medicines, drug, drugs, prescription, prescribe, prescribed, dose, doses, dosage, supplement, supplements, diet, dieting, exercise, lifestyle, surgery
+
+# Medicines related to the tests
+drugs: metformin, insulin, statin, statins, atorvastatin, rosuvastatin, simvastatin, pravastatin, ezetimibe, fenofibrate, levothyroxine, liothyronine, methimazole, propylthiouracil, spironolactone, letrozole, clomiphene, semaglutide, tirzepatide, liraglutide, cabergoline, bromocriptine, estrogen therapy, hormone therapy, hormone replacement, birth control, contraceptive, contraceptives, progesterone therapy
+
+# General conditions
+conditions: disease, diseases, disorder, disorders, syndrome, cancer, tumor, tumour, tumors, infection, anemia, anaemia, obesity, obese, overweight, endometriosis, failure, insufficiency, deficiency
+
+2345-7: diabetes, diabetic, prediabetes, prediabetic, hyperglycemia, hypoglycemia, insulin resistance
+3094-0: kidney disease, renal failure, dehydration, dehydrated, azotemia, uremia
+2160-0: kidney disease, chronic kidney disease, renal failure, nephropathy
+2951-2: hyponatremia, hypernatremia, dehydration
+2823-3: hypokalemia, hyperkalemia
+2075-0: hypochloremia, hyperchloremia, acidosis
+2028-9: acidosis, alkalosis
+17861-6: hypercalcemia, hypocalcemia, hyperparathyroidism, osteoporosis
+2093-3: hypercholesterolemia, high cholesterol, heart disease, cardiovascular disease, atherosclerosis
+2085-9: heart disease, cardiovascular disease, dyslipidemia
+13457-7: hyperlipidemia, dyslipidemia, atherosclerosis, heart attack
+2571-8: hypertriglyceridemia, pancreatitis, metabolic syndrome
+4548-4: diabetes, diabetic, prediabetes, prediabetic
+3016-3: hypothyroidism, hyperthyroidism, hashimoto, graves, thyroid disease
+3024-7: hypothyroidism, hyperthyroidism, thyroiditis
+2986-8: pcos, pmos, polycystic, hyperandrogenism, hirsutism
+13967-5: pcos, pmos, polycystic, insulin resistance
+2243-4: menopause, menopausal, perimenopause, perimenopausal, estrogen deficiency
+15067-2: menopause, perimenopause, infertility, infertile, ovarian failure
+10501-5: pcos, pmos, infertility, anovulation
+2842-3: hyperprolactinemia, prolactinoma, pituitary tumor
+2191-5: adrenal hyperplasia, cushing, cushings, hyperandrogenism
+38476-3: infertility, infertile, ovarian reserve, pcos, menopause

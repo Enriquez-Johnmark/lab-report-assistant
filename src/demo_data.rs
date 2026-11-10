@@ -114,6 +114,14 @@ const HORMONES: &[Test] = &[
     ),
 ];
 
+/// The code of every test Example Labs runs.
+pub fn test_codes() -> Vec<&'static str> {
+    [METABOLIC, LIPIDS, GLUCOSE_AND_THYROID, HORMONES]
+        .iter()
+        .flat_map(|group| group.iter().map(|test| test.loinc))
+        .collect()
+}
+
 /// The five kinds of lab report, by code and name.
 const KINDS: [(&str, &str); 5] = [
     ("screen", "Hormone and metabolic screen"),

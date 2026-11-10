@@ -157,3 +157,42 @@ fn b5_below_is_not_mistaken_for_low_inside_another_word() {
     );
     assert_eq!(failures, []);
 }
+
+fn wording_failures(text: &str) -> Vec<(Check, Option<String>)> {
+    failed(&[
+        explain("r1", "Glucose is sugar in the blood. Yours is within the lab's range."),
+        explain("r2", text),
+    ])
+    .into_iter()
+    .filter(|(check, _)| *check == Check::Wording)
+    .collect()
+}
+
+#[test]
+fn b6_a_draft_with_diagnosis_treatment_or_medication_wording_is_blocked() {
+    for text in [
+        "Calcium helps bones. Yours is above the lab's range, which may mean hyperparathyroidism.",
+        "Calcium is above the lab's range; you have a calcium problem.",
+        "Calcium is above the lab's range. Your physician may prescribe something.",
+        "Calcium is above the lab's range. Metformin is not involved.",
+        "Calcium is above the lab's range, a sign of Kidney Disease.",
+    ] {
+        assert_eq!(wording_failures(text), [(Check::Wording, Some("r2".into()))], "{text}");
+    }
+}
+
+#[test]
+fn b6_words_are_matched_whole_so_ordinary_words_pass() {
+    // "dose" inside "glucose", "risk" inside "brisk", "drug" inside "drugstore".
+    let text = "Calcium is above the lab's range. Glucose, brisk drugstore words are fine.";
+    assert_eq!(wording_failures(text), []);
+}
+
+#[test]
+fn b6_the_wording_list_names_conditions_for_every_test_the_generator_produces() {
+    let missing: Vec<&str> = lab_report_assistant::demo_data::test_codes()
+        .into_iter()
+        .filter(|code| lab_report_assistant::checks::conditions_for(code).is_empty())
+        .collect();
+    assert_eq!(missing, Vec::<&str>::new());
+}
