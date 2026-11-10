@@ -3,6 +3,7 @@
 //! text, the engine delivers the notice once, and every step is audited.
 
 pub mod demo_data;
+pub mod evidence;
 pub mod fhir;
 pub mod lab_reports;
 pub mod made_up;
