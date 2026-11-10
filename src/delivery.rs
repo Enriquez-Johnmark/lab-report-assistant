@@ -6,8 +6,11 @@ use std::sync::Arc;
 
 use uuid::Uuid;
 
+use crate::engine::clock::Clock;
 use crate::engine::files::MasterKey;
+use crate::engine::ids::{MessageId, TenantId};
 use crate::engine::mail::Email;
+use crate::engine::outbox::{BoxFuture, CheckFailed, Outbox, PreSendCheck};
 use crate::engine::signed::Signer;
 
 /// How long a patient's link works (D4).
@@ -55,4 +58,93 @@ impl Delivery {
             ),
         }
     }
+}
+
+/// The send-time check on every message (C3): a report's notice goes out only
+/// while its delivery's draft is still the report's approved, latest text,
+/// unchanged since approval. Other messages, such as login links, pass.
+#[derive(Clone)]
+pub struct CurrentApproval {
+    pool: sqlx::PgPool,
+}
+
+impl CurrentApproval {
+    /// Checks against `pool`.
+    pub fn new(pool: sqlx::PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// `None` when `message` isn't a report's notice.
+    async fn approved_text_stands(&self, tenant: TenantId, message: MessageId) -> Result<Option<bool>, sqlx::Error> {
+        let row = sqlx::query!(
+            "select a.content_hash, d.explanations,
+                    d.attempt = (select max(attempt) from drafts
+                                 where tenant_id = d.tenant_id and lab_report_id = d.lab_report_id) as \"latest!\"
+             from deliveries v
+             join approvals a on a.tenant_id = v.tenant_id and a.draft_id = v.draft_id
+             join drafts d on d.tenant_id = v.tenant_id and d.id = v.draft_id
+             where v.tenant_id = $1 and v.message_id = $2",
+            tenant.as_uuid(),
+            message.as_uuid(),
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        let Some(row) = row else { return Ok(None) };
+        let explanations: Vec<crate::drafting::Explanation> =
+            serde_json::from_value(row.explanations).map_err(|err| sqlx::Error::Decode(err.into()))?;
+        Ok(Some(
+            row.latest && crate::drafts::content_hash(&explanations) == row.content_hash,
+        ))
+    }
+}
+
+impl PreSendCheck for CurrentApproval {
+    fn check<'a>(&'a self, tenant: TenantId, id: MessageId, _: &'a Email) -> BoxFuture<'a, Result<(), CheckFailed>> {
+        Box::pin(async move {
+            match self.approved_text_stands(tenant, id).await {
+                Ok(None | Some(true)) => Ok(()),
+                Ok(Some(false)) => Err(CheckFailed::Refused(
+                    "the report changed after it was approved".to_owned(),
+                )),
+                Err(err) => Err(CheckFailed::Unavailable(err.to_string())),
+            }
+        })
+    }
+}
+
+/// Approves every notice left unapproved because an approval was interrupted
+/// between its own transaction and the engine's (ADR 0001). A system-wide
+/// sweep; each approval names the notice's clinic.
+pub async fn approve_waiting_notices(
+    pool: &sqlx::PgPool,
+    clock: Arc<dyn Clock>,
+) -> Result<usize, crate::engine::outbox::OutboxError> {
+    let waiting = sqlx::query!(
+        "select v.tenant_id, v.message_id from deliveries v
+         join outbox_messages m on m.tenant_id = v.tenant_id and m.id = v.message_id
+         where m.status = 'draft'"
+    )
+    .fetch_all(pool)
+    .await?;
+    let outbox = Outbox::new(pool.clone(), clock);
+    let checks = CurrentApproval::new(pool.clone());
+    let mut approved = 0;
+    for notice in waiting {
+        let (tenant, id) = (TenantId::from(notice.tenant_id), MessageId::from(notice.message_id));
+        let message = outbox.get(tenant, id).await?;
+        // A notice whose report changed since stays a draft and is never sent.
+        if checks.approved_text_stands(tenant, id).await? == Some(true) {
+            outbox
+                .approve(
+                    tenant,
+                    id,
+                    crate::engine::audit::SYSTEM,
+                    &message.content_hash(),
+                    &checks,
+                )
+                .await?;
+            approved += 1;
+        }
+    }
+    Ok(approved)
 }

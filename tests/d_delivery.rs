@@ -120,3 +120,108 @@ async fn d3_the_notice_holds_no_test_name_value_or_result(pool: PgPool) {
         );
     }
 }
+
+/// A mail provider that only counts what it was asked to send.
+#[derive(Clone, Default)]
+struct Counting(std::sync::Arc<std::sync::Mutex<Vec<String>>>);
+
+impl lab_report_assistant::engine::mail::Mailer for Counting {
+    fn blocks_duplicate_keys(&self) -> bool {
+        false
+    }
+
+    async fn send(
+        &self,
+        email: &lab_report_assistant::engine::mail::Email,
+        _key: &str,
+    ) -> Result<lab_report_assistant::engine::mail::SendReceipt, lab_report_assistant::engine::mail::MailError> {
+        self.0.lock().unwrap().push(email.to_address.clone());
+        Ok(lab_report_assistant::engine::mail::SendReceipt {
+            provider_message_id: "m1".into(),
+        })
+    }
+}
+
+async fn send_now(pool: &PgPool, mailer: &Counting) {
+    use lab_report_assistant::engine::outbox::Sender;
+    let checks = std::sync::Arc::new(lab_report_assistant::delivery::CurrentApproval::new(pool.clone()));
+    Sender::new(pool.clone(), mailer.clone(), clock(), checks)
+        .drain_once(10)
+        .await
+        .unwrap();
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d1_an_approved_notice_is_sent(pool: PgPool) {
+    let (reviews, physician, report) = setup(&pool).await;
+    approve(&pool, &reviews, &physician, report).await;
+    let mailer = Counting::default();
+
+    send_now(&pool, &mailer).await;
+
+    assert_eq!(*mailer.0.lock().unwrap(), ["lena.estrada@example.test"]);
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn c3_a_notice_whose_report_changed_after_approval_is_not_sent(pool: PgPool) {
+    let (reviews, physician, report) = setup(&pool).await;
+    approve(&pool, &reviews, &physician, report).await;
+    let text: Vec<Explanation> = (1..=8)
+        .map(|n| Explanation {
+            result: format!("r{n}"),
+            text: format!("Result {n}."),
+        })
+        .collect();
+    reviews.edit(&physician, report, text).await.unwrap();
+    let mailer = Counting::default();
+
+    send_now(&pool, &mailer).await;
+
+    assert!(mailer.0.lock().unwrap().is_empty());
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d1_a_notice_left_unapproved_by_an_interruption_is_approved_by_the_sweep(pool: PgPool) {
+    let (reviews, physician, report) = setup(&pool).await;
+    approve(&pool, &reviews, &physician, report).await;
+    // As if the process stopped between the approval and the engine's approval.
+    sqlx::query(
+        "update outbox_messages set status = 'draft', approved_hash = null, approved_at = null, approved_by = null",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    lab_report_assistant::delivery::approve_waiting_notices(&pool, clock())
+        .await
+        .unwrap();
+    let mailer = Counting::default();
+    send_now(&pool, &mailer).await;
+
+    assert_eq!(mailer.0.lock().unwrap().len(), 1);
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d1_a_message_that_isnt_a_notice_such_as_a_login_link_still_goes_out(pool: PgPool) {
+    use lab_report_assistant::engine::outbox::{NoExtraChecks, Outbox};
+    let (_, physician, _) = setup(&pool).await;
+    let outbox = Outbox::new(pool.clone(), clock());
+    let email = lab_report_assistant::engine::mail::Email {
+        to_address: "dr.example@example.test".into(),
+        from_name: "Example Womens Health".into(),
+        reply_to: None,
+        subject: "Your login link".into(),
+        body_text: "Open http://lab.example.test/login/abc to log in.".into(),
+    };
+    let id = outbox.create_draft(physician.tenant, &email).await.unwrap();
+    let message = outbox.get(physician.tenant, id).await.unwrap();
+    outbox
+        .approve(physician.tenant, id, "system", &message.content_hash(), &NoExtraChecks)
+        .await
+        .unwrap();
+    let mailer = Counting::default();
+
+    send_now(&pool, &mailer).await;
+
+    assert_eq!(mailer.0.lock().unwrap().len(), 1);
+}

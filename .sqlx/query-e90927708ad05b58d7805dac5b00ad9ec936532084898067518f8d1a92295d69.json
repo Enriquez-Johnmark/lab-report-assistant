@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select a.content_hash, d.explanations,\n                    d.attempt = (select max(attempt) from drafts\n                                 where tenant_id = d.tenant_id and lab_report_id = d.lab_report_id) as \"latest!\"\n             from deliveries v\n             join approvals a on a.tenant_id = v.tenant_id and a.draft_id = v.draft_id\n             join drafts d on d.tenant_id = v.tenant_id and d.id = v.draft_id\n             where v.tenant_id = $1 and v.message_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "content_hash",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "approvals",
+            "name": "content_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "explanations",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "drafts",
+            "name": "explanations"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "latest!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "e90927708ad05b58d7805dac5b00ad9ec936532084898067518f8d1a92295d69"
+}

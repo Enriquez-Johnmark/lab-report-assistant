@@ -16,7 +16,7 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 
 use crate::checks::{Check, check_draft, forbidden_term};
-use crate::delivery::{Delivery, LINK_DAYS};
+use crate::delivery::{CurrentApproval, Delivery, LINK_DAYS};
 use crate::drafting::Explanation;
 use crate::drafts::{DRAFT_JOB, DraftId, NewDraft, Source, content_hash, store};
 use crate::engine::accounts::{MemberError, MemberId, Members, Session};
@@ -24,7 +24,7 @@ use crate::engine::clock::Clock;
 use crate::engine::ids::MessageId;
 use crate::engine::jobs::{JobError, Jobs};
 use crate::engine::mail::Email;
-use crate::engine::outbox::{ContentHash, NoExtraChecks, Outbox, OutboxError};
+use crate::engine::outbox::{ContentHash, Outbox, OutboxError};
 use crate::lab_reports::{ClinicId, ImportError, LabReportId, LabReports};
 
 /// Most drafts the model writes for one lab report (C6).
@@ -252,7 +252,13 @@ impl Reviews {
         // interrupted, the delivery sweep approves it (ADR 0001).
         if let Some((message, email)) = notice {
             Outbox::new(self.pool.clone(), self.clock.clone())
-                .approve(clinic, message, &who.email, &ContentHash::of(&email), &NoExtraChecks)
+                .approve(
+                    clinic,
+                    message,
+                    &who.email,
+                    &ContentHash::of(&email),
+                    &CurrentApproval::new(self.pool.clone()),
+                )
                 .await?;
         }
         Ok(())
