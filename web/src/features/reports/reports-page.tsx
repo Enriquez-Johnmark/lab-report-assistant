@@ -1,6 +1,7 @@
 import { DatabaseIcon } from "lucide-react"
 import { Link, useLocation } from "react-router"
 
+import type { LabReportRow } from "@/api/generated/LabReportRow"
 import { useMe } from "@/app/queries"
 import { PageHeader } from "@/components/page-header"
 import { QueryError } from "@/components/query-error"
@@ -27,6 +28,27 @@ import {
 import { formatDateTime } from "@/lib/dates"
 import { sentStatuses, statusLabel } from "@/lib/labels"
 import { useLoadDemoData, useReports } from "@/features/reports/queries"
+
+/** How many reports wait for a physician, and how many a check blocked. */
+function QueueSummary({ reports }: { reports: LabReportRow[] }) {
+  const count = (status: string) => reports.filter((report) => report.status === status).length
+  const parts = [
+    [count("waiting"), "ready to review"],
+    [count("blocked"), "blocked by a check"],
+    [count("drafting"), "drafting"],
+  ].filter(([n]) => n !== 0)
+  if (parts.length === 0) return null
+  return (
+    <p className="text-sm text-muted-foreground">
+      {parts.map(([n, label], index) => (
+        <span key={label}>
+          {index > 0 ? " · " : null}
+          <span className="font-medium text-foreground tabular-nums">{n}</span> {label}
+        </span>
+      ))}
+    </p>
+  )
+}
 
 /** The clinic's lab reports: ready to review first, then blocked ones,
  *  those still drafting, and approved ones last (the API's order). */
@@ -88,47 +110,56 @@ export function ReportsPage() {
           <EmptyHeader>
             <EmptyTitle>No lab reports yet</EmptyTitle>
             <EmptyDescription>
-              Load the 30 made-up demo reports to try it, or import FHIR files from the command
-              line.
+              {me.data?.role === "administrator"
+                ? "Load the 30 made-up demo reports to try it, or import FHIR files from the command line."
+                : "Lab reports appear here once the clinic's administrator imports them."}
             </EmptyDescription>
           </EmptyHeader>
           {me.data?.role === "administrator" ? <EmptyContent>{loadDemo}</EmptyContent> : null}
         </Empty>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Patient</TableHead>
-              <TableHead>Lab report</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Imported</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(shown ?? []).map((report) => {
-              const status = statusLabel(report.status)
-              return (
-                <TableRow key={report.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      to={`/reports/${report.id}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {report.patient_name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{report.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDateTime(report.imported_at)}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <>
+          {isSentView ? null : <QueueSummary reports={reports.data} />}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Patient</TableHead>
+                <TableHead className="hidden sm:table-cell">Lab report</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="hidden md:table-cell">Imported</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(shown ?? []).map((report) => {
+                const status = statusLabel(report.status)
+                return (
+                  <TableRow key={report.id}>
+                    <TableCell className="font-medium">
+                      <Link
+                        to={`/reports/${report.id}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {report.patient_name}
+                      </Link>
+                      {/* On a phone the lab report sits under the patient, so
+                        the status stays on screen. */}
+                      <span className="block font-normal text-muted-foreground sm:hidden">
+                        {report.name}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">{report.name}</TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant}>{status.label}</Badge>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {formatDateTime(report.imported_at)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </>
       )}
     </>
   )
