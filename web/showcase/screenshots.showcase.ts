@@ -1,0 +1,83 @@
+import { expect, test, type Page } from "@playwright/test"
+
+import { linkIn, logIn } from "../e2e/support.ts"
+import { ADMIN, OUT, PHYSICIAN } from "./support.ts"
+
+const desktop = { width: 1280, height: 860 }
+const phone = { width: 390, height: 844 }
+
+test.describe.configure({ mode: "serial" })
+
+async function shot(page: Page, name: string) {
+  await page.waitForLoadState("networkidle")
+  await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true })
+}
+
+/** The made-up clinic as a physician meets it: the demo data loaded by the
+ *  administrator and drafted from Claude's recorded answers. */
+test("screenshots", async ({ browser }) => {
+  const admin = await browser.newPage({ viewport: desktop, deviceScaleFactor: 2 })
+  await logIn(admin, ADMIN)
+  const load = admin.getByRole("button", { name: "Load the demo data" })
+  if (await load.isVisible()) await load.click()
+  await expect(admin.getByRole("row")).toHaveCount(31)
+  // Every report is drafted within a round or two of the worker.
+  await expect(admin.getByText("Drafting")).toHaveCount(0, { timeout: 90_000 })
+
+  const page = await browser.newPage({ viewport: desktop, deviceScaleFactor: 2 })
+  await logIn(page, PHYSICIAN)
+  await shot(page, "desktop-1-lab-reports")
+
+  // A draft that passed every check, beside the lab's own values.
+  await page
+    .getByRole("row")
+    .filter({ hasText: "Ready to review" })
+    .first()
+    .getByRole("link")
+    .click()
+  await expect(page.getByRole("button", { name: "Approve this text" })).toBeVisible()
+  await shot(page, "desktop-2-review")
+  const patient = (await page.getByRole("heading", { level: 1 }).textContent()) ?? ""
+
+  // The physician approves; the server emails the notice.
+  await page.getByRole("button", { name: "Approve this text" }).click()
+  await expect(page.getByText("This exact text was approved on")).toBeVisible()
+  await expect(page.getByText("Notice queued for the patient")).toBeVisible()
+  await shot(page, "desktop-3-approved-with-timeline")
+
+  // What the patient sees: first a button, so scanners can't open it.
+  const [given, family] = patient.toLowerCase().split(" ")
+  const link = new URL(await linkIn(`${given}.${family}@example.test`, "/r/")).pathname
+  const patientPage = await browser.newPage({ viewport: desktop, deviceScaleFactor: 2 })
+  await patientPage.goto(link)
+  await shot(patientPage, "desktop-4-patient-link")
+  await patientPage.getByRole("button", { name: "Show my report" }).click()
+  await expect(patientPage.getByText("Made-up demo: not a real patient")).toBeVisible()
+  await shot(patientPage, "desktop-5-patient-report")
+  const onPhone = await browser.newPage({ viewport: phone, deviceScaleFactor: 3 })
+  await onPhone.goto(link)
+  await onPhone.getByRole("button", { name: "Show my report" }).click()
+  await expect(onPhone.getByText("Made-up demo: not a real patient")).toBeVisible()
+  await shot(onPhone, "phone-1-patient-report")
+
+  // A draft the checks blocked, with the reasons.
+  await page.goto("/")
+  await page
+    .getByRole("row")
+    .filter({ hasText: "Blocked by a check" })
+    .first()
+    .getByRole("link")
+    .click()
+  await expect(page.getByText("This draft failed a check, so it can't be approved")).toBeVisible()
+  await shot(page, "desktop-6-blocked-draft")
+  await page.getByRole("button", { name: "Edit" }).click()
+  await shot(page, "desktop-7-edit")
+
+  await page.goto("/sent")
+  await expect(page.getByText("Opened by the patient")).toBeVisible()
+  await shot(page, "desktop-8-sent")
+
+  await admin.goto("/activity")
+  await expect(admin.getByRole("row").nth(1)).toBeVisible()
+  await shot(admin, "desktop-9-activity")
+})
