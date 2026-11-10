@@ -125,12 +125,77 @@ async fn b1_an_answer_that_doesnt_parse_is_stored_blocked(pool: PgPool) {
     assert_eq!(invalid, 1);
 }
 
+/// Runs the jobs `times` times, a lease apart, with `model`; `fallback` is
+/// whether the template may stand in on the last attempt.
+async fn run_repeatedly(pool: &PgPool, times: usize, fallback: bool, model: Fake) -> Arc<FixedClock> {
+    let clock = Arc::new(FixedClock::new(datetime!(2026-11-10 09:00 UTC)));
+    let drafter = Drafter::new(pool.clone(), clock.clone(), Some(model)).with_template_fallback(fallback);
+    let jobs = Jobs::new(pool.clone(), clock.clone());
+    for _ in 0..times {
+        work(&jobs, &drafter).await.unwrap();
+        clock.advance(time::Duration::minutes(10));
+    }
+    clock
+}
+
+fn unavailable(_: String) -> Result<String, LlmError> {
+    Err(LlmError::Unavailable("timed out".into()))
+}
+
 #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
-async fn f3_when_the_model_doesnt_answer_the_template_draft_is_stored(pool: PgPool) {
+async fn f3_a_model_that_doesnt_answer_is_retried_then_the_template_stands_in(pool: PgPool) {
+    let (clinic, report) = imported(&pool).await;
+    let clock = Arc::new(FixedClock::new(datetime!(2026-11-10 09:00 UTC)));
+    let drafter = Drafter::new(pool.clone(), clock.clone(), Some(Fake(unavailable)));
+    let jobs = Jobs::new(pool.clone(), clock.clone());
+    let drafts = Drafts::new(pool.clone());
+
+    for attempt in 1..=3 {
+        assert!(
+            drafts.latest(clinic, report).await.unwrap().is_none(),
+            "no draft before attempt {attempt}"
+        );
+        work(&jobs, &drafter).await.unwrap();
+        clock.advance(time::Duration::minutes(10));
+    }
+
+    let draft = drafts.latest(clinic, report).await.unwrap().unwrap();
+    assert_eq!(
+        (draft.source, draft.blocked),
+        (Source::Template, false),
+        "the template stands in on the last attempt"
+    );
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn f3_a_job_that_keeps_failing_is_given_up_after_three_attempts(pool: PgPool) {
+    imported(&pool).await;
+
+    run_repeatedly(&pool, 6, false, Fake(unavailable)).await;
+
+    let (attempts, status): (i32, String) = sqlx::query_as("select attempts, status from jobs")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!((attempts, status.as_str()), (3, "dead"));
+    let calls: i64 = sqlx::query_scalar("select count(*) from llm_calls")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(calls, 3, "three paid calls at most");
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn g4_replaying_recordings_never_puts_the_template_in_place_of_a_missing_answer(pool: PgPool) {
     let (clinic, report) = imported(&pool).await;
 
-    run(&pool, Fake(|_| Err(LlmError::Unavailable("timed out".into())))).await;
+    run_repeatedly(&pool, 3, false, Fake(unavailable)).await;
 
-    let draft = Drafts::new(pool.clone()).latest(clinic, report).await.unwrap().unwrap();
-    assert_eq!((draft.source, draft.blocked), (Source::Template, false));
+    assert!(
+        Drafts::new(pool.clone())
+            .latest(clinic, report)
+            .await
+            .unwrap()
+            .is_none()
+    );
 }

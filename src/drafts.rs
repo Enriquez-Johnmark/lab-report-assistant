@@ -85,6 +85,9 @@ pub enum DraftError {
     /// The database failed.
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+    /// The model didn't answer, and the template may not stand in.
+    #[error(transparent)]
+    Model(#[from] LlmError),
     /// A stored draft couldn't be read back.
     #[error("a stored draft is unreadable: {0}")]
     Corrupt(#[from] serde_json::Error),
@@ -132,6 +135,7 @@ pub struct Drafter<M> {
     clock: Arc<dyn Clock>,
     reports: LabReports,
     model: Option<M>,
+    fallback: bool,
 }
 
 impl<M: LanguageModel> Drafter<M> {
@@ -143,11 +147,27 @@ impl<M: LanguageModel> Drafter<M> {
             clock,
             reports,
             model,
+            fallback: true,
         }
+    }
+
+    /// Whether the template may stand in when the model doesn't answer on a
+    /// job's last attempt (yes by default). Replaying recordings turns it
+    /// off, so a missing recording fails instead of passing unnoticed.
+    pub fn with_template_fallback(mut self, fallback: bool) -> Self {
+        self.fallback = fallback;
+        self
     }
 
     /// Drafts the lab report and stores the draft with its check results.
     pub async fn draft(&self, clinic: ClinicId, report: LabReportId) -> Result<DraftId, DraftError> {
+        self.draft_attempt(clinic, report, true).await
+    }
+
+    /// Drafts the lab report. When the model doesn't answer, the template
+    /// stands in only on the `last` attempt, if allowed; otherwise the error
+    /// is returned so the job is tried again.
+    async fn draft_attempt(&self, clinic: ClinicId, report: LabReportId, last: bool) -> Result<DraftId, DraftError> {
         let lab_report = self.reports.get(clinic, report).await?;
         let results = &lab_report.results;
         let (source, model, explanations, failures) = match &self.model {
@@ -182,7 +202,8 @@ impl<M: LanguageModel> Drafter<M> {
                 };
                 cost_log::record(&self.pool, &call).await?;
                 match reply {
-                    Err(_) => (Source::Template, None, template_draft(results), Vec::new()),
+                    Err(_) if last && self.fallback => (Source::Template, None, template_draft(results), Vec::new()),
+                    Err(err) => return Err(DraftError::Model(err)),
                     Ok(reply) => match parse_answer(&reply.text) {
                         Ok(explanations) => {
                             let failures = check_draft(&explanations, results);
@@ -231,8 +252,13 @@ impl<M: LanguageModel> Drafter<M> {
 /// How long a worker holds a drafting job before another may take it.
 const LEASE: Duration = Duration::minutes(5);
 
-/// Runs every drafting job that is due; returns how many ran. A job whose
-/// lab report has gone is given up on; any other failure is retried later.
+/// How many times a drafting job is tried, so a failing one never calls the
+/// model without end.
+pub const MAX_ATTEMPTS: i32 = 3;
+
+/// Runs every drafting job that is due; returns how many ran. A failed job is
+/// tried again a lease later, at most [`MAX_ATTEMPTS`] times in all; a job
+/// whose lab report has gone is given up on at once.
 pub async fn work<M: LanguageModel>(jobs: &Jobs, drafter: &Drafter<M>) -> Result<usize, DraftError> {
     let mut ran = 0;
     while let Some(job) = jobs.claim(LEASE).await? {
@@ -240,8 +266,11 @@ pub async fn work<M: LanguageModel>(jobs: &Jobs, drafter: &Drafter<M>) -> Result
         let report = job.payload["lab_report_id"]
             .as_str()
             .and_then(|id| id.parse::<uuid::Uuid>().ok());
+        let last = job.attempts >= MAX_ATTEMPTS;
         let outcome = match (job.kind.as_str(), job.tenant, report) {
-            (DRAFT_JOB, Some(clinic), Some(report)) => drafter.draft(clinic, report.into()).await.map(drop),
+            (DRAFT_JOB, Some(clinic), Some(report)) => {
+                drafter.draft_attempt(clinic, report.into(), last).await.map(drop)
+            }
             _ => {
                 jobs.fail(&job, "not a drafting job this worker knows", None).await?;
                 continue;
@@ -250,6 +279,7 @@ pub async fn work<M: LanguageModel>(jobs: &Jobs, drafter: &Drafter<M>) -> Result
         match outcome {
             Ok(()) => jobs.complete(&job).await?,
             Err(DraftError::Report(ImportError::NotFound)) => jobs.fail(&job, "the lab report is gone", None).await?,
+            Err(err) if last => jobs.fail(&job, &err.to_string(), None).await?,
             Err(err) => {
                 jobs.fail(&job, &err.to_string(), Some(drafter.clock.now() + LEASE))
                     .await?

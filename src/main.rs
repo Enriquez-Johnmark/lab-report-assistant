@@ -181,7 +181,7 @@ async fn work(args: &[String]) -> anyhow::Result<()> {
     let ran = if flag("--recorded") {
         work(
             &jobs,
-            &Drafter::new(pool, clock, Some(Recorded::new(&drafting_model(), dir))),
+            &Drafter::new(pool, clock, Some(Recorded::new(&drafting_model(), dir))).with_template_fallback(false),
         )
         .await?
     } else if flag("--record") {
