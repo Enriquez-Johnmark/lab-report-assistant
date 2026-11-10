@@ -11,7 +11,7 @@ use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
                      import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
-                     work [--record | --recorded] | serve | outbox-drain | eval [--record] | \
+                     work [--record | --recorded] | serve [--recorded] | outbox-drain | eval [--record] | \
                      clinic add-physician --clinic ID --email EMAIL --name NAME";
 
 fn main() -> ExitCode {
@@ -64,7 +64,7 @@ async fn run() -> anyhow::Result<()> {
             println!("added {name} <{email}>");
             Ok(())
         }
-        Some("serve") => serve().await,
+        Some("serve") => serve(args.iter().any(|arg| arg == "--recorded")).await,
         Some("outbox-drain") => outbox_drain().await,
         Some("eval") => evaluate(args.iter().any(|arg| arg == "--record")).await,
         Some("import") => import(&args).await,
@@ -211,7 +211,7 @@ const TICK: std::time::Duration = std::time::Duration::from_secs(15);
 /// Runs the web app, the outbox sender (login emails go out at once) and the
 /// drafting worker, until stopped. Development settings by default: the app
 /// on 127.0.0.1:3000 and email caught by Mailpit.
-async fn serve() -> anyhow::Result<()> {
+async fn serve(recorded: bool) -> anyhow::Result<()> {
     use lab_report_assistant::engine::mail::MailpitMailer;
     use lab_report_assistant::engine::outbox::Sender;
     use lab_report_assistant::web::{AppState, router};
@@ -260,16 +260,24 @@ async fn serve() -> anyhow::Result<()> {
         }
     });
 
-    let drafter = lab_report_assistant::drafts::Drafter::new(pool.clone(), clock.clone(), live_model()?);
     let jobs = lab_report_assistant::engine::jobs::Jobs::new(pool.clone(), clock.clone());
-    tokio::spawn(async move {
-        loop {
-            if let Err(err) = lab_report_assistant::drafts::work(&jobs, &drafter).await {
-                tracing::error!(%err, "drafting failed");
-            }
-            tokio::time::sleep(TICK).await;
-        }
-    });
+    if recorded {
+        // The demo and the showcase: Claude's recorded drafts of the demo
+        // reports, replayed for free; a report without one gets the template.
+        let model = lab_report_assistant::model::Recorded::new(
+            &drafting_model(),
+            std::path::Path::new(lab_report_assistant::model::DIR),
+        );
+        spawn_drafting(
+            jobs,
+            lab_report_assistant::drafts::Drafter::new(pool.clone(), clock.clone(), Some(model)),
+        );
+    } else {
+        spawn_drafting(
+            jobs,
+            lab_report_assistant::drafts::Drafter::new(pool.clone(), clock.clone(), live_model()?),
+        );
+    }
 
     let listener = tokio::net::TcpListener::bind(&bind)
         .await
@@ -369,4 +377,19 @@ async fn evaluate(record: bool) -> anyhow::Result<()> {
     std::fs::write("evalset/report.md", &text).context("writing evalset/report.md")?;
     print!("{text}");
     Ok(())
+}
+
+/// Runs the drafting worker every [`TICK`].
+fn spawn_drafting<M: lab_report_assistant::engine::llm::LanguageModel + 'static>(
+    jobs: lab_report_assistant::engine::jobs::Jobs,
+    drafter: lab_report_assistant::drafts::Drafter<M>,
+) {
+    tokio::spawn(async move {
+        loop {
+            if let Err(err) = lab_report_assistant::drafts::work(&jobs, &drafter).await {
+                tracing::error!(%err, "drafting failed");
+            }
+            tokio::time::sleep(TICK).await;
+        }
+    });
 }
