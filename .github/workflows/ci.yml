@@ -43,16 +43,17 @@ jobs:
       - name: Test
         run: cargo nextest run --all-features --locked --profile ci
       # Fails the build when a finished milestone's criterion has no passing
-      # test (docs/architecture.md). Runs after failed tests too, to show them.
+      # test (docs/architecture.md). Runs after failed tests too, to show
+      # them, but not when the tests never ran.
       - name: Evidence pack
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('target/nextest/ci/junit.xml') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           signed=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}" --jq .commit.verification.verified || echo unknown)
           cargo run --locked --quiet -- evidence --commit "${{ github.sha }}" --signed "$signed"
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('target/evidence/index.html') != '' }}
         with:
           name: evidence-pack
           path: target/evidence/index.html
