@@ -1,0 +1,7 @@
+{
+  "model": "claude-sonnet-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"This test reflects your average blood sugar level over the past few months. Your value is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"This test measures the hormone your pituitary gland releases to signal the thyroid gland. Your value is above the lab's range.\"},{\"result\":\"r3\",\"text\":\"This test measures the amount of active thyroid hormone circulating in your blood. Your value is within the lab's range.\"}]}",
+  "request_id": "req_011CguGebxmJW7vafPv9c1Lt",
+  "input_tokens": 805,
+  "output_tokens": 150
+}

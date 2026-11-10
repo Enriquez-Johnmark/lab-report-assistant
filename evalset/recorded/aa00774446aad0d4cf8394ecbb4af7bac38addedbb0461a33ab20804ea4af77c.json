@@ -1,0 +1,7 @@
+{
+  "model": "claude-sonnet-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"This test measures the total amount of cholesterol, a fatty substance, circulating in your blood. Your value is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"This test measures the portion of cholesterol carried by high-density particles, often called the protective type. Your value is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"This test estimates the portion of cholesterol carried by low-density particles, calculated from your other lipid results. Your value is within the lab's range.\"},{\"result\":\"r4\",\"text\":\"This test measures triglycerides, a type of fat found in your blood. Your value is within the lab's range.\"}]}",
+  "request_id": "req_011CguGg8U69p2r5dxFb59HH",
+  "input_tokens": 889,
+  "output_tokens": 216
+}

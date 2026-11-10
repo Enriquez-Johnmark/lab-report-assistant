@@ -1,0 +1,7 @@
+{
+  "model": "claude-haiku-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"This test measures the total amount of testosterone in the blood. The value is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"This test measures sex hormone binding globulin, a protein that binds sex hormones in the blood. The value is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"This test measures estradiol, a form of estrogen, in the blood. The value is within the lab's range.\"},{\"result\":\"r4\",\"text\":\"This test measures follicle stimulating hormone, a pituitary hormone, in the blood. The value is within the lab's range.\"},{\"result\":\"r5\",\"text\":\"This test measures luteinizing hormone, a pituitary hormone, in the blood. The value is within the lab's range.\"},{\"result\":\"r6\",\"text\":\"This test measures prolactin, a pituitary hormone, in the blood. The value is within the lab's range.\"},{\"result\":\"r7\",\"text\":\"This test measures DHEA sulfate, a hormone made by the adrenal glands, in the blood. The value is within the lab's range.\"},{\"result\":\"r8\",\"text\":\"This test measures anti-Mullerian hormone, a hormone produced by small ovarian follicles, in the blood. The value is within the lab's range.\"}]}",
+  "request_id": "req_011CguGnYKxSegFSAupuajpf",
+  "input_tokens": 1164,
+  "output_tokens": 405
+}

@@ -1,0 +1,7 @@
+{
+  "model": "claude-haiku-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"Glucose is the main sugar in the blood. This value is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"Urea nitrogen measures a waste product filtered by the kidneys from the blood. This value is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"Creatinine is a waste product from muscle that reflects how well the kidneys filter. This value is within the lab's range.\"},{\"result\":\"r4\",\"text\":\"Sodium is an electrolyte that helps regulate fluid balance in the body. This value is within the lab's range.\"},{\"result\":\"r5\",\"text\":\"Potassium is an electrolyte important for nerve and muscle function. This value is within the lab's range.\"},{\"result\":\"r6\",\"text\":\"Chloride is an electrolyte that works with sodium to maintain fluid balance. This value is within the lab's range.\"},{\"result\":\"r7\",\"text\":\"Carbon dioxide measures the bicarbonate level in the blood, which helps keep the body's acid-base balance stable. This value is within the lab's range.\"},{\"result\":\"r8\",\"text\":\"Calcium is a mineral in the blood that supports bone health, nerve signaling and muscle function. This value is above the lab's range.\"}]}",
+  "request_id": "req_011CguGmZLwuYHqSccULxMNT",
+  "input_tokens": 1151,
+  "output_tokens": 404
+}

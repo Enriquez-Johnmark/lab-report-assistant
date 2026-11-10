@@ -1,0 +1,7 @@
+{
+  "model": "claude-haiku-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"Total cholesterol measures the overall amount of cholesterol in the blood. This result is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"HDL cholesterol measures the amount of high-density lipoprotein cholesterol in the blood. This result is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"LDL cholesterol is calculated from other lipid values and estimates the amount of low-density lipoprotein cholesterol in the blood. This result is within the lab's range.\"},{\"result\":\"r4\",\"text\":\"Triglycerides measures the amount of fat carried in the blood. This result is within the lab's range.\"}]}",
+  "request_id": "req_011CguGoJexErEqYUFtL63QT",
+  "input_tokens": 889,
+  "output_tokens": 222
+}

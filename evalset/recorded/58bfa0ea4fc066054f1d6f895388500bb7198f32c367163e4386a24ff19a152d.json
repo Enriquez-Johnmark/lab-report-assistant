@@ -1,0 +1,7 @@
+{
+  "model": "claude-haiku-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"Hemoglobin A1c reflects average blood sugar over the past few months. This result is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"TSH is a pituitary hormone that signals the thyroid gland to produce hormones. This result is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"Free T4 measures the amount of unbound thyroxine, a hormone made by the thyroid gland, circulating in the blood. This result is within the lab's range.\"}]}",
+  "request_id": "req_011CguGnuipmfoBXLFMdzApW",
+  "input_tokens": 806,
+  "output_tokens": 172
+}

@@ -1,0 +1,7 @@
+{
+  "model": "claude-haiku-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"Hemoglobin A1c measures average blood sugar over the past few months. This result is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"TSH measures the level of a hormone that signals the thyroid gland to work. This result is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"Free T4 measures the amount of unbound thyroid hormone circulating in the blood. This result is above the lab's range.\"}]}",
+  "request_id": "req_011CguGmLVXtuCDV8x4oMvpX",
+  "input_tokens": 805,
+  "output_tokens": 154
+}

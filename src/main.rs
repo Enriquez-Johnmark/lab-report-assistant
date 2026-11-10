@@ -11,7 +11,7 @@ use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
                      import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
-                     work [--record | --recorded] | serve | outbox-drain | \
+                     work [--record | --recorded] | serve | outbox-drain | eval [--record] | \
                      clinic add-physician --clinic ID --email EMAIL --name NAME";
 
 fn main() -> ExitCode {
@@ -66,6 +66,7 @@ async fn run() -> anyhow::Result<()> {
         }
         Some("serve") => serve().await,
         Some("outbox-drain") => outbox_drain().await,
+        Some("eval") => evaluate(args.iter().any(|arg| arg == "--record")).await,
         Some("import") => import(&args).await,
         Some("evidence") => evidence(&args),
         Some("work") => work(&args).await,
@@ -322,5 +323,33 @@ async fn outbox_drain() -> anyhow::Result<()> {
         .await
         .context("sending")?;
     println!("{report:?}");
+    Ok(())
+}
+
+/// Measures Sonnet and Haiku on the 30 demo reports and writes
+/// `evalset/report.md`. From the recordings by default; with `--record`,
+/// asks Claude with the owner's key and records each answer.
+async fn evaluate(record: bool) -> anyhow::Result<()> {
+    use lab_report_assistant::engine::llm::AnthropicClient;
+    use lab_report_assistant::eval::{MODELS, evaluate, report};
+    use lab_report_assistant::model::{DIR, Recorded, Recording};
+
+    let dir = std::path::Path::new(DIR);
+    let mut results = Vec::new();
+    for model in MODELS {
+        let result = if record {
+            let key = api_key().context("--record needs the owner's API key")?;
+            let base = std::env::var("ANTHROPIC_BASE_URL").unwrap_or_else(|_| "https://api.anthropic.com".to_owned());
+            let client = AnthropicClient::new(&base, key.into(), model, std::time::Duration::from_secs(90))
+                .context("setting up the model client")?;
+            evaluate(&Recording::new(client, dir)).await
+        } else {
+            evaluate(&Recorded::new(model, dir)).await
+        };
+        results.push(result);
+    }
+    let text = report(&results);
+    std::fs::write("evalset/report.md", &text).context("writing evalset/report.md")?;
+    print!("{text}");
     Ok(())
 }

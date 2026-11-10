@@ -1,0 +1,7 @@
+{
+  "model": "claude-sonnet-5-5",
+  "text": "{\"explanations\":[{\"result\":\"r1\",\"text\":\"This measures the total amount of testosterone, a sex hormone, circulating in the blood. Your value is within the lab's range.\"},{\"result\":\"r2\",\"text\":\"This measures a protein that carries sex hormones in the blood. Your value is within the lab's range.\"},{\"result\":\"r3\",\"text\":\"This measures estradiol, the main form of estrogen in the blood. Your value is within the lab's range.\"},{\"result\":\"r4\",\"text\":\"This measures follicle-stimulating hormone, a pituitary hormone that signals the ovaries or testes. Your value is above the lab's range.\"},{\"result\":\"r5\",\"text\":\"This measures luteinizing hormone, a pituitary hormone that helps regulate sex hormone production. Your value is below the lab's range.\"},{\"result\":\"r6\",\"text\":\"This measures prolactin, a pituitary hormone involved in milk production. Your value is within the lab's range.\"},{\"result\":\"r7\",\"text\":\"This measures a hormone made mainly by the adrenal glands that the body uses to build other hormones. Your value is within the lab's range.\"},{\"result\":\"r8\",\"text\":\"This measures a hormone made by small developing follicles in the ovaries, often used as a marker of ovarian reserve. Your value is within the lab's range.\"}]}",
+  "request_id": "req_011CguGgpriGhk5MyfigBogM",
+  "input_tokens": 1162,
+  "output_tokens": 421
+}

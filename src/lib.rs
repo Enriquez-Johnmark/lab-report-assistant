@@ -8,6 +8,7 @@ pub mod delivery;
 pub mod demo_data;
 pub mod drafting;
 pub mod drafts;
+pub mod eval;
 pub mod evidence;
 pub mod fhir;
 pub mod html;
