@@ -73,6 +73,16 @@ export function ReportsPage() {
         <Skeleton className="h-64 w-full" />
       ) : reports.isError ? (
         <QueryError error={reports.error} />
+      ) : isSentView && shown?.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Nothing sent yet</EmptyTitle>
+            <EmptyDescription>
+              Reports appear here once a physician approves them, with whether each patient has
+              opened theirs.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : reports.data.length === 0 && !isSentView ? (
         <Empty>
           <EmptyHeader>
