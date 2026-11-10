@@ -1,8 +1,9 @@
-import { CircleAlertIcon, CircleCheckIcon, TriangleAlertIcon } from "lucide-react"
+import { ChevronLeftIcon, CircleAlertIcon, CircleCheckIcon, TriangleAlertIcon } from "lucide-react"
 import { useState } from "react"
-import { useParams } from "react-router"
+import { Link, useParams } from "react-router"
 
 import type { LabReportDetail } from "@/api/generated/LabReportDetail"
+import type { ResultRow } from "@/api/generated/ResultRow"
 import { useMe } from "@/app/queries"
 import { PageHeader } from "@/components/page-header"
 import { QueryError } from "@/components/query-error"
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { formatDateTime } from "@/lib/dates"
+import { cn } from "@/lib/utils"
 import { actionLabel, flagLabel, sourceLabel } from "@/lib/labels"
 import { FhirSourceCard } from "@/features/reports/fhir-source"
 import { RejectDialog } from "@/features/reports/reject-dialog"
@@ -44,6 +46,13 @@ export function ReportPage() {
 
   return (
     <>
+      <Link
+        to={data.approved_at ? "/sent" : "/"}
+        className="-mb-3 inline-flex w-fit items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        <ChevronLeftIcon aria-hidden className="size-4" />
+        {data.approved_at ? "Sent" : "Lab reports"}
+      </Link>
       <PageHeader title={data.patient_name} description={data.name} />
       <DraftStatus report={data} />
       {mode === "read" ? (
@@ -135,39 +144,68 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
   )
 }
 
-/** The lab's values (from the lab data, never the model) beside each explanation. */
+/** The lab's values (from the lab data, never the model) beside each
+ *  explanation: a table on wider screens, one block per result on a phone.
+ *  Values outside the lab's range are set in bold, beside their flag. */
 function ResultsTable({ report }: { report: LabReportDetail }) {
   const explanation = (result: string) =>
     report.draft?.explanations.find((e) => e.result === result)?.text
+  const flag = (row: ResultRow) => (
+    <Badge variant={row.flag === "normal" ? "secondary" : "warning"}>{flagLabel(row.flag)}</Badge>
+  )
+  const value = (row: ResultRow) => (
+    <span className={cn("tabular-nums", row.flag !== "normal" && "font-semibold")}>
+      {row.value} {row.unit}
+    </span>
+  )
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Test</TableHead>
-          <TableHead className="text-right">Value</TableHead>
-          <TableHead>Lab's range</TableHead>
-          <TableHead className="min-w-64">Explanation for the patient</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Test</TableHead>
+              <TableHead className="text-right">Value</TableHead>
+              <TableHead>Lab's range</TableHead>
+              <TableHead className="min-w-64">Explanation for the patient</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {report.results.map((row) => (
+              <TableRow key={row.result} className="align-top">
+                <TableCell className="font-medium whitespace-normal">{row.test}</TableCell>
+                <TableCell className="text-right">{value(row)}</TableCell>
+                <TableCell className="whitespace-normal">
+                  <span className="tabular-nums">{row.range}</span>
+                  <br />
+                  {flag(row)}
+                </TableCell>
+                <TableCell className="whitespace-normal">
+                  {explanation(row.result) ?? "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <ul className="flex flex-col divide-y border-y md:hidden">
         {report.results.map((row) => (
-          <TableRow key={row.result} className="align-top">
-            <TableCell className="font-medium whitespace-normal">{row.test}</TableCell>
-            <TableCell className="text-right tabular-nums">
-              {row.value} {row.unit}
-            </TableCell>
-            <TableCell className="whitespace-normal">
-              <span className="tabular-nums">{row.range}</span>
-              <br />
-              <Badge variant={row.flag === "normal" ? "secondary" : "warning"}>
-                {flagLabel(row.flag)}
-              </Badge>
-            </TableCell>
-            <TableCell className="whitespace-normal">{explanation(row.result) ?? "—"}</TableCell>
-          </TableRow>
+          <li key={row.result} className="flex flex-col gap-2 py-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="font-medium">{row.test}</span>
+              {value(row)}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                Lab's range <span className="text-foreground tabular-nums">{row.range}</span>
+              </span>
+              {flag(row)}
+            </div>
+            <p className="text-sm">{explanation(row.result) ?? "—"}</p>
+          </li>
         ))}
-      </TableBody>
-    </Table>
+      </ul>
+    </>
   )
 }
 
