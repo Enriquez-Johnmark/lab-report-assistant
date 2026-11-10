@@ -77,6 +77,20 @@ pub struct StoredResult {
     pub flag: Flag,
 }
 
+impl From<crate::fhir::LabResult> for StoredResult {
+    fn from(result: crate::fhir::LabResult) -> Self {
+        Self {
+            code: result.code,
+            name: result.name,
+            value: result.value,
+            unit: result.unit,
+            low: result.low,
+            high: result.high,
+            flag: result.flag,
+        }
+    }
+}
+
 /// A lab report in a clinic's list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LabReportSummary {

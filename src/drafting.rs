@@ -147,3 +147,120 @@ pub fn table(results: &[StoredResult]) -> Vec<TableRow> {
         })
         .collect()
 }
+
+/// What each test measures, in plain words with no digits, for the template
+/// draft used when no model is set up.
+const MEASURES: &[(&str, &str)] = &[
+    (
+        "2345-7",
+        "Glucose is the main sugar in your blood, and the body's main source of energy.",
+    ),
+    (
+        "3094-0",
+        "Urea nitrogen is a waste product that the kidneys clear from the blood.",
+    ),
+    (
+        "2160-0",
+        "Creatinine is a waste product from muscles that the kidneys clear from the blood.",
+    ),
+    ("2951-2", "Sodium is a salt that helps balance the water in your body."),
+    (
+        "2823-3",
+        "Potassium is a mineral that helps your nerves and muscles, including the heart, work.",
+    ),
+    (
+        "2075-0",
+        "Chloride is a salt that works with sodium to balance the water in your body.",
+    ),
+    (
+        "2028-9",
+        "Bicarbonate helps keep the acid balance of your blood steady.",
+    ),
+    (
+        "17861-6",
+        "Calcium is a mineral that keeps bones, nerves and muscles working.",
+    ),
+    (
+        "2093-3",
+        "Total cholesterol is the amount of all the cholesterol carried in your blood.",
+    ),
+    (
+        "2085-9",
+        "HDL cholesterol is the kind that carries cholesterol away from the blood vessels.",
+    ),
+    (
+        "13457-7",
+        "LDL cholesterol is the kind that can build up in the walls of blood vessels.",
+    ),
+    ("2571-8", "Triglycerides are a type of fat carried in your blood."),
+    (
+        "4548-4",
+        "This test shows your average blood sugar over the past few months.",
+    ),
+    (
+        "3016-3",
+        "TSH is the hormone that tells your thyroid how much thyroid hormone to make.",
+    ),
+    (
+        "3024-7",
+        "Free thyroxine is the main hormone your thyroid makes, in the form your body can use.",
+    ),
+    (
+        "2986-8",
+        "Testosterone is a hormone that women make in small amounts, mostly in the ovaries and adrenal glands.",
+    ),
+    (
+        "13967-5",
+        "Sex hormone binding globulin is a protein that carries hormones such as testosterone in the blood.",
+    ),
+    (
+        "2243-4",
+        "Estradiol is the main form of estrogen, and its amount changes through the menstrual cycle.",
+    ),
+    (
+        "15067-2",
+        "Follicle-stimulating hormone helps the ovaries prepare an egg each cycle.",
+    ),
+    (
+        "10501-5",
+        "Luteinizing hormone triggers the release of an egg each cycle.",
+    ),
+    (
+        "2842-3",
+        "Prolactin is a hormone made in the pituitary gland, best known for its role in making breast milk.",
+    ),
+    ("2191-5", "DHEA sulfate is a hormone made mostly by the adrenal glands."),
+    (
+        "38476-3",
+        "Anti-Mullerian hormone is made by the follicles in the ovaries that hold eggs.",
+    ),
+];
+
+/// Where the value sits, in the words the direction check expects.
+pub fn placement(flag: Flag) -> &'static str {
+    match flag {
+        Flag::Normal => "Yours is within the lab's range.",
+        Flag::High => "Yours is above the lab's range.",
+        Flag::Low => "Yours is below the lab's range.",
+    }
+}
+
+/// A draft from fixed wording, for when no model is set up: what each test
+/// measures and where its value sits. A test it has no wording for is named
+/// as it is.
+pub fn template_draft(results: &[StoredResult]) -> Vec<Explanation> {
+    results
+        .iter()
+        .enumerate()
+        .map(|(position, result)| {
+            let measures = MEASURES.iter().find(|(code, _)| *code == result.code).map_or_else(
+                || format!("{} is one of the tests in this report.", result.name),
+                |(_, text)| (*text).to_owned(),
+            );
+            Explanation {
+                result: result_id(position),
+                text: format!("{measures} {}", placement(result.flag)),
+            }
+        })
+        .collect()
+}
