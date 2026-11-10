@@ -33,6 +33,7 @@ async fn serve_starts_and_answers_health(pool: PgPool) {
             .env("DATABASE_URL", database_url(&pool).await)
             .env("BIND_ADDR", format!("127.0.0.1:{port}"))
             .env("MAILPIT_URL", "http://127.0.0.1:1")
+            .env("MASTER_KEY", "ab".repeat(32))
             .env_remove("OWNER_ANTHROPIC_API_KEY")
             .env_remove("ANTHROPIC_API_KEY")
             .stdout(Stdio::null())

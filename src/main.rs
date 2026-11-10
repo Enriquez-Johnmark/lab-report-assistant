@@ -11,7 +11,7 @@ use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
                      import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
-                     work [--record | --recorded] | serve | \
+                     work [--record | --recorded] | serve | outbox-drain | \
                      clinic add-physician --clinic ID --email EMAIL --name NAME";
 
 fn main() -> ExitCode {
@@ -65,6 +65,7 @@ async fn run() -> anyhow::Result<()> {
             Ok(())
         }
         Some("serve") => serve().await,
+        Some("outbox-drain") => outbox_drain().await,
         Some("import") => import(&args).await,
         Some("evidence") => evidence(&args),
         Some("work") => work(&args).await,
@@ -293,4 +294,30 @@ fn live_model() -> anyhow::Result<Option<lab_report_assistant::engine::llm::Anth
     )
     .context("setting up the model client")?;
     Ok(Some(client))
+}
+
+/// Sends what the outbox holds once, through Mailpit, after approving any
+/// notice an interrupted approval left waiting; then stops.
+async fn outbox_drain() -> anyhow::Result<()> {
+    use lab_report_assistant::engine::mail::MailpitMailer;
+    use lab_report_assistant::engine::outbox::Sender;
+
+    let setting = |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_owned());
+    let pool = connect().await?;
+    let clock: Arc<dyn lab_report_assistant::engine::clock::Clock> = Arc::new(SystemClock);
+    lab_report_assistant::delivery::approve_waiting_notices(&pool, clock.clone())
+        .await
+        .context("approving")?;
+    let mailer = MailpitMailer::new(
+        &setting("MAILPIT_URL", "http://localhost:8025"),
+        &setting("MAIL_FROM_ADDRESS", "reports@example-womens-health.test"),
+    )
+    .context("setting up Mailpit")?;
+    let checks = Arc::new(lab_report_assistant::delivery::CurrentApproval::new(pool.clone()));
+    let report = Sender::new(pool, mailer, clock, checks)
+        .drain_once(50)
+        .await
+        .context("sending")?;
+    println!("{report:?}");
+    Ok(())
 }

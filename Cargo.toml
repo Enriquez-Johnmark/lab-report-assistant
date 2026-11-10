@@ -7,6 +7,10 @@ publish = false
 license-file = "LICENSE"
 description = "Plain-language lab reports a physician approves, on the Nudgewright engine"
 
+[features]
+# Test-only crash points for the D2 test; never enabled in production builds.
+failpoints = ["nudgewright/failpoints"]
+
 [dependencies]
 anyhow = "1.0.104"
 axum = "0.8.9"
@@ -32,8 +36,13 @@ uuid = { version = "1.28.0", features = ["v7", "serde"] }
 [dev-dependencies]
 tempfile = "3.27.0"
 tower = { version = "0.5.3", features = ["util"] }
+wiremock = "0.6.5"
 # TypeScript types for the React app, exported by `cargo test` (docs/frontend.md).
 ts-rs = { version = "12.0.1", features = ["uuid-impl", "no-serde-warnings"] }
+
+[[test]]
+name = "d2_crash"
+required-features = ["failpoints"]
 
 # Line tables are enough for backtraces, and keep test builds small.
 [profile.dev]
