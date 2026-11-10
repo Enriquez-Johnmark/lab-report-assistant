@@ -147,3 +147,29 @@ fn f2_a_patient_without_a_name_is_refused() {
     let json = changed("Patient", |patient| patient["name"] = Value::Array(vec![]));
     assert_eq!(refusal(&json), "patient-12: no name");
 }
+
+#[test]
+fn f2_a_range_without_a_unit_is_refused() {
+    let json = changed("Observation", |obs| {
+        obs["referenceRange"][0]["high"].as_object_mut().unwrap().remove("unit");
+    });
+    assert_eq!(refusal(&json), "obs-12-01 (Glucose): the range has no unit");
+}
+
+#[test]
+fn f2_a_result_listed_twice_is_refused() {
+    let json = changed("DiagnosticReport", |report| {
+        let first = report["result"][0].clone();
+        report["result"].as_array_mut().unwrap().push(first);
+    });
+    assert_eq!(refusal(&json), "result Observation/obs-12-01 is listed twice");
+}
+
+#[test]
+fn f2_two_resources_with_the_same_id_are_refused() {
+    let mut bundle = demo(12);
+    let entries = bundle["entry"].as_array_mut().unwrap();
+    let copy = entries.last().unwrap().clone();
+    entries.push(copy);
+    assert_eq!(refusal(&bundle.to_string()), "two resources are Observation/obs-12-08");
+}

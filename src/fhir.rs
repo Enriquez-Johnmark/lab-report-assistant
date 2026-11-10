@@ -202,6 +202,18 @@ pub fn read_lab_report(json: &str) -> Result<LabReport, FhirError> {
         return Err(FhirError::NotABundle);
     }
     let bundle: Bundle = parse(bundle, "the bundle")?;
+    // References are resolved by type and id, so each must name one resource.
+    let mut seen = std::collections::HashSet::new();
+    for entry in &bundle.entry {
+        let key = format!(
+            "{}/{}",
+            entry.resource["resourceType"].as_str().unwrap_or_default(),
+            entry.resource["id"].as_str().unwrap_or_default()
+        );
+        if !seen.insert(key.clone()) {
+            return Err(FhirError::Report(format!("two resources are {key}")));
+        }
+    }
     let report: Report = match of_type(&bundle, "DiagnosticReport").collect::<Vec<_>>().as_slice() {
         [] => return Err(FhirError::ReportCount("no DiagnosticReport")),
         [one] => parse(one.resource.clone(), "the DiagnosticReport")?,
@@ -229,8 +241,12 @@ pub fn read_lab_report(json: &str) -> Result<LabReport, FhirError> {
         return Err(FhirError::Report(format!("{} has no results", report.id)));
     }
     let mut results = Vec::with_capacity(report.result.len());
+    let mut listed = std::collections::HashSet::new();
     for target in &report.result {
         let target = reference(Some(target)).unwrap_or_default();
+        if !listed.insert(target.clone()) {
+            return Err(FhirError::Report(format!("result {target} is listed twice")));
+        }
         let observation = of_type(&bundle, "Observation")
             .find(|e| format!("Observation/{}", e.resource["id"].as_str().unwrap_or_default()) == target)
             .ok_or_else(|| FhirError::Report(format!("result {target} is not in the bundle")))?;
@@ -323,7 +339,8 @@ fn read_result(obs: Observation, patient: &str) -> Result<LabResult, FhirError> 
         let Some(end) = end else { return Ok(None) };
         match &end.unit {
             Some(other) if *other != unit => Err(problem(format!("the range is in {other}, the value in {unit}"))),
-            _ => Ok(end.value),
+            Some(_) => Ok(end.value),
+            None => Err(problem("the range has no unit".to_owned())),
         }
     };
     let (low, high) = (bound(&range.low)?, bound(&range.high)?);
