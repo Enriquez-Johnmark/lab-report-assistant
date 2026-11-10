@@ -12,8 +12,9 @@ treatment: treatment, treat, treated, treating, therapy, medication, medications
 # Medicines related to the tests
 drugs: metformin, insulin, statin, statins, atorvastatin, rosuvastatin, simvastatin, pravastatin, ezetimibe, fenofibrate, levothyroxine, liothyronine, methimazole, propylthiouracil, spironolactone, letrozole, clomiphene, semaglutide, tirzepatide, liraglutide, cabergoline, bromocriptine, estrogen therapy, hormone therapy, hormone replacement, birth control, contraceptive, contraceptives, progesterone therapy
 
-# General conditions
-conditions: disease, diseases, disorder, disorders, syndrome, cancer, tumor, tumour, tumors, infection, anemia, anaemia, obesity, obese, overweight, endometriosis, failure, insufficiency, deficiency
+# General conditions. Any word beginning with hyper or hypo (hyperthyroid,
+# hypoglycemic…) is blocked too, in checks.rs.
+conditions: underactive, overactive, anemic, postmenopausal, premenopausal, kidney damage, liver disease, liver problems, damage, disease, diseases, disorder, disorders, syndrome, cancer, tumor, tumour, tumors, infection, anemia, anaemia, obesity, obese, overweight, endometriosis, failure, insufficiency, deficiency
 
 2345-7: diabetes, diabetic, prediabetes, prediabetic, hyperglycemia, hypoglycemia, insulin resistance
 3094-0: kidney disease, renal failure, dehydration, dehydrated, azotemia, uremia

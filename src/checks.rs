@@ -210,9 +210,16 @@ pub fn conditions_for(code: &str) -> Vec<String> {
         .collect()
 }
 
-/// The first term from the wording list that the text uses, as whole words.
+/// The first term from the wording list that the text uses, as whole words,
+/// or any word beginning with `hyper` or `hypo`, which name conditions.
 pub fn forbidden_term(text: &str) -> Option<String> {
     let words = words(text);
+    if let Some(word) = words
+        .iter()
+        .find(|word| word.starts_with("hyper") || word.starts_with("hypo"))
+    {
+        return Some(word.clone());
+    }
     WORDING.iter().flat_map(|(_, terms)| terms).find_map(|term| {
         (!term.is_empty() && words.windows(term.len()).any(|window| window == term.as_slice())).then(|| term.join(" "))
     })

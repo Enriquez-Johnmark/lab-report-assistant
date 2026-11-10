@@ -234,3 +234,16 @@ fn b4_a_number_written_in_words_is_blocked_too() {
         assert!(failed(&worded).contains(&(Check::Digit, Some("r2".into()))), "{text}");
     }
 }
+
+#[test]
+fn b6_variants_of_listed_conditions_are_blocked() {
+    for text in [
+        "Calcium is above the lab's range, as with a hypothyroid gland.",
+        "Calcium is above the lab's range, which an overactive gland can cause.",
+        "Calcium is above the lab's range; postmenopausal women often see this.",
+        "Calcium is above the lab's range, which can follow kidney damage.",
+        "Calcium is above the lab's range, as in hypervitaminosis.",
+    ] {
+        assert_eq!(wording_failures(text), [(Check::Wording, Some("r2".into()))], "{text}");
+    }
+}
