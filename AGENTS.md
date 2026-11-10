@@ -40,8 +40,13 @@ Research claims carry a source (URL, publisher, date), and a confidence (H/M/L).
 - **React:** read the `vercel-react-best-practices`, `vercel-composition-patterns`, `shadcn`, `frontend-design` and `web-design-guidelines` skills (`.claude/skills/`) before writing or reviewing React, and follow `docs/frontend.md`; where they disagree, `docs/frontend.md` wins. Third-party skills are read in full before they're added, recorded in `skills-lock.json` and `docs/frontend.md` with source, commit and licence, and may not run unpinned commands.
 - **Tests:** every acceptance criterion has a test whose name starts with its ID.
 - **Report test results only from commands actually run.**
-- **Small commits** on `main`, each one behaviour or one doc change; messages imperative; no AI attribution trailers such as "Co-Authored-By" (owner's choice). Commits are signed with the owner's SSH key, so GitHub shows them as verified.
+- **Time:** read only through the engine's injected `Clock`; direct system-clock calls are banned with clippy `disallowed-methods`.
+- **Clinic isolation:** every repository function takes a `ClinicId` (the engine's `TenantId`), and every query filters on it; the exceptions are in `docs/architecture.md`.
+- **Engine:** Nudgewright, a git dependency pinned to a release and re-exported as `crate::engine`; never patched here.
+- **Small commits** on `main`, each one behaviour (a test plus the code that makes it pass) or one small refactor or doc change, aiming for under ~150 changed lines excluding `.sqlx/` and `Cargo.lock`; messages imperative; no AI attribution trailers such as "Co-Authored-By" (owner's choice). Commits are signed with the owner's SSH key, so GitHub shows them as verified.
+- **Before every commit:** `cargo fmt --check`, `cargo clippy --all-targets --all-features --locked -- -D warnings` and `cargo nextest run --all-features --locked` pass. If SQL changed, run `cargo sqlx prepare -- --all-targets --all-features` and commit `.sqlx/`.
 
 ## Working here
 
-- **Cloud sessions:** `scripts/cloud-session-start.sh` runs at session start (via `.claude/settings.json`) and sets up commit signing. On a local machine it does nothing.
+- **Cloud sessions:** `scripts/cloud-session-start.sh` runs at session start (via `.claude/settings.json`): commit signing, Postgres and Mailpit, the pinned Rust and the migrations. On a local machine it does nothing.
+- **Locally:** `docker compose up -d`; `cp .env.example .env` once; `cargo run -- migrate`; then `cargo nextest run` (or `cargo test`).

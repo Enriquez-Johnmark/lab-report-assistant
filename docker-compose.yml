@@ -1,0 +1,23 @@
+# Local development only: Postgres for the app and its tests, Mailpit to catch
+# every email so nothing real is ever sent from a dev machine.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: lab_reports
+      POSTGRES_PASSWORD: lab_reports
+      POSTGRES_DB: lab_reports
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab_reports"]
+      interval: 2s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit:v1.27.11
+    ports:
+      - "127.0.0.1:8025:8025"
+volumes:
+  pgdata:
