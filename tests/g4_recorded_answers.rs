@@ -98,3 +98,34 @@ async fn g4_an_answer_that_cant_be_saved_is_still_returned() {
 
     assert_eq!(reply.unwrap().input_tokens, 120, "the paid answer isn't thrown away");
 }
+
+#[tokio::test]
+async fn g4_recording_only_asks_for_requests_not_yet_recorded() {
+    use lab_report_assistant::model::RecordMissing;
+    let dir = tempfile::tempdir().unwrap();
+    let missing = RecordMissing::new(Counting(AtomicUsize::new(0)), dir.path());
+
+    missing.complete(&request("one")).await.unwrap();
+    missing.complete(&request("one")).await.unwrap();
+    missing.complete(&request("two")).await.unwrap();
+
+    assert_eq!(missing.live_calls(), 2, "the second ask for \"one\" was replayed");
+}
+
+#[tokio::test]
+async fn g4_recordings_no_request_uses_are_removed() {
+    use lab_report_assistant::model::{RecordMissing, fingerprint};
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("stale.json"), "{}").unwrap();
+    let missing = RecordMissing::new(Counting(AtomicUsize::new(0)), dir.path());
+    missing.complete(&request("one")).await.unwrap();
+
+    let removed = missing.remove_unused().unwrap();
+
+    assert_eq!(removed, 1);
+    let left: Vec<String> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .collect();
+    assert_eq!(left, [format!("{}.json", fingerprint("claude-test", &request("one")))]);
+}

@@ -45,10 +45,11 @@ impl ModelResult {
         passed as f64 / self.outcomes.len().max(1) as f64
     }
 
-    /// The average cost of one report's draft, if every price is known.
+    /// The average cost of one draft, over the calls whose cost is known;
+    /// `None` if none is.
     pub fn cost_per_report_usd(&self) -> Option<f64> {
-        let total: Option<i64> = self.outcomes.iter().map(|o| o.cost_nano_usd).sum();
-        total.map(|nano| nano as f64 / 1e9 / self.outcomes.len().max(1) as f64)
+        let costs: Vec<i64> = self.outcomes.iter().filter_map(|o| o.cost_nano_usd).collect();
+        (!costs.is_empty()).then(|| costs.iter().sum::<i64>() as f64 / 1e9 / costs.len() as f64)
     }
 }
 

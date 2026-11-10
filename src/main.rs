@@ -332,21 +332,38 @@ async fn outbox_drain() -> anyhow::Result<()> {
 async fn evaluate(record: bool) -> anyhow::Result<()> {
     use lab_report_assistant::engine::llm::AnthropicClient;
     use lab_report_assistant::eval::{MODELS, evaluate, report};
-    use lab_report_assistant::model::{DIR, Recorded, Recording};
+    use lab_report_assistant::model::{DIR, RecordMissing, Recorded};
 
     let dir = std::path::Path::new(DIR);
     let mut results = Vec::new();
+    let mut recorders = Vec::new();
     for model in MODELS {
         let result = if record {
             let key = api_key().context("--record needs the owner's API key")?;
             let base = std::env::var("ANTHROPIC_BASE_URL").unwrap_or_else(|_| "https://api.anthropic.com".to_owned());
             let client = AnthropicClient::new(&base, key.into(), model, std::time::Duration::from_secs(90))
                 .context("setting up the model client")?;
-            evaluate(&Recording::new(client, dir)).await
+            let recorder = RecordMissing::new(client, dir);
+            let result = evaluate(&recorder).await;
+            println!(
+                "{model}: asked Claude {} time(s); the rest were already recorded",
+                recorder.live_calls()
+            );
+            recorders.push(recorder);
+            result
         } else {
             evaluate(&Recorded::new(model, dir)).await
         };
         results.push(result);
+    }
+    // Only after every model ran: one model's recordings are another's unused.
+    let mut used = std::collections::HashSet::new();
+    for recorder in &recorders {
+        used.extend(recorder.used());
+    }
+    if record {
+        let removed = lab_report_assistant::model::remove_unused(dir, &used).context("removing unused recordings")?;
+        println!("removed {removed} recording(s) no request uses any more");
     }
     let text = report(&results);
     std::fs::write("evalset/report.md", &text).context("writing evalset/report.md")?;

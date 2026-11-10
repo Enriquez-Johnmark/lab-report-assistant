@@ -131,3 +131,78 @@ impl<M: LanguageModel> LanguageModel for Recording<M> {
         Ok(reply)
     }
 }
+
+/// Replays recorded answers and asks the live model only for requests not
+/// yet recorded, recording those; it remembers every request it saw, so
+/// recordings no request uses any more can be removed.
+pub struct RecordMissing<M> {
+    recorded: Recorded,
+    live: Recording<M>,
+    used: std::sync::Mutex<std::collections::HashSet<String>>,
+    live_calls: std::sync::atomic::AtomicUsize,
+}
+
+impl<M: LanguageModel> RecordMissing<M> {
+    /// `live`'s recordings in `dir`.
+    pub fn new(live: M, dir: &Path) -> Self {
+        Self {
+            recorded: Recorded::new(live.model(), dir),
+            live: Recording::new(live, dir),
+            used: std::sync::Mutex::new(std::collections::HashSet::new()),
+            live_calls: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
+
+    /// The fingerprints of every request seen.
+    pub fn used(&self) -> Vec<String> {
+        self.used
+            .lock()
+            .map(|used| used.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// How many requests went to the live model.
+    pub fn live_calls(&self) -> usize {
+        self.live_calls.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// Deletes every recording in the folder that no request seen here used;
+    /// returns how many.
+    pub fn remove_unused(&self) -> std::io::Result<usize> {
+        remove_unused(&self.live.dir, &self.used().into_iter().collect())
+    }
+}
+
+impl<M: LanguageModel> LanguageModel for RecordMissing<M> {
+    fn model(&self) -> &str {
+        self.live.model()
+    }
+
+    async fn complete(&self, request: &LlmRequest) -> Result<LlmReply, LlmError> {
+        if let Ok(mut used) = self.used.lock() {
+            used.insert(fingerprint(self.model(), request));
+        }
+        match self.recorded.complete(request).await {
+            Ok(reply) => Ok(reply),
+            Err(_) => {
+                self.live_calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                self.live.complete(request).await
+            }
+        }
+    }
+}
+
+/// Deletes every recording in `dir` whose fingerprint isn't in `used`;
+/// returns how many.
+pub fn remove_unused(dir: &Path, used: &std::collections::HashSet<String>) -> std::io::Result<usize> {
+    let mut removed = 0;
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        let stem = path.file_stem().and_then(|stem| stem.to_str()).unwrap_or_default();
+        if path.extension().is_some_and(|ext| ext == "json") && !used.contains(stem) {
+            std::fs::remove_file(&path)?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
