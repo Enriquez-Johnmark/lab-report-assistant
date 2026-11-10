@@ -4,7 +4,7 @@ Where Lab Report Assistant stands and what comes next, in one page. The mileston
 
 ## Where we are
 
-**Five of six milestones done; all 38 acceptance criteria proven** by passing tests. Each milestone's evidence page is in `docs/evidence/`.
+**All six milestones done; all 38 acceptance criteria proven** by passing tests. Each milestone's evidence page is in `docs/evidence/`.
 
 | Milestone | Delivers | Criteria | Status |
 | --- | --- | --- | --- |
@@ -13,7 +13,7 @@ Where Lab Report Assistant stands and what comes next, in one page. The mileston
 | M3 | Logins, the physician's review, the audit log, the React pages, browser tests | B8, C1–C7, E1–E3, F1, F4 | Done (2026-11-10), code-reviewed |
 | M4 | Delivery: the approved report goes out once as a notice with a signed link; the patient's page shows it and logs each opening | D1–D6 | Done (2026-11-10), code-reviewed |
 | M5 | Measurement: Claude's drafts of all 30 reports recorded, Sonnet against Haiku | G2, G3 | Done (2026-11-10), code-reviewed |
-| M6 | Showcase: README results, screenshots, walkthrough video, portfolio page | — | Next |
+| M6 | Showcase: README results, screenshots, walkthrough video, portfolio page | — | Done (2026-11-10) |
 
 Each milestone ends with a code review, with its findings fixed.
 
@@ -23,7 +23,7 @@ The first of four healthcare projects, each in its own repository, built one at 
 
 | # | Project | Language | Status |
 | --- | --- | --- | --- |
-| 1 | Lab Report Assistant | Rust on Nudgewright | Building |
+| 1 | Lab Report Assistant | Rust on Nudgewright | Done |
 | 2 | Care follow-up reminders | Rust on Nudgewright | Not started |
 | 3 | Care-team message assistant | TypeScript | Not started |
 | 4 | Record-access audit | Python | Not started |
