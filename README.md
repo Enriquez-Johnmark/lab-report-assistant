@@ -2,7 +2,7 @@
 
 An AI assistant that turns a patient's lab results into a plain-language report a physician approves. Claude drafts it; code checks every number, unit and range against the lab data and refuses anything that reads as a diagnosis; the approved text is delivered once; every step is in an append-only audit log.
 
-**Status:** M5 of six done, all 38 acceptance criteria proven ([M5's evidence page](docs/evidence/m5.html)).
+**Status:** all six milestones done; all 38 acceptance criteria proven ([the evidence page](docs/evidence/m6.html)).
 
 - **M1:** made-up lab data, strict FHIR import scoped to each clinic, and the evidence pack, which links each criterion to its passing tests.
 - **M2:** Claude drafts each imported report in a background job. The model sees only the results and writes no numbers; code blocks any draft that misses a result, invents one, contains a number, puts a value on the wrong side of the lab's range, or uses diagnosis, treatment or medication wording. Claude's answers are recorded, so the tests need no API key.
@@ -19,7 +19,27 @@ An AI assistant that turns a patient's lab results into a plain-language report 
 
   Haiku mostly fails by repeating test names that contain digits ("Free T4"). Of Sonnet's three failed drafts, two were blocked by the checks being cautious ("normal muscle activity" read as a placement; "not bound to proteins" read as a negation) and one for naming "ovarian reserve". Every miss blocked a good draft; none let a bad one through. The checks weren't tuned on these 30 reports, so the numbers stay honest.
 
-The showcase comes next (`ROADMAP.md`).
+- **M6:** the showcase below.
+
+## See it
+
+A 90-second walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
+
+| The physician reviews Claude's draft beside the lab's own values | The patient's page, from the emailed link |
+|---|---|
+| ![Review](docs/showcase/desktop-2-review.png) | ![Patient's report on a phone](docs/showcase/phone-1-patient-report.png) |
+
+## What the code enforces
+
+- **The model never sees who the patient is:** a request carries each result's test name, code, value, unit, range and flag, nothing else (`a2_*`).
+- **The model writes no numbers:** values come only from the lab data; a digit or a number in words blocks the draft (`b4_*`, `b7_*`).
+- **No diagnosis or treatment:** a list of about 200 condition, drug and advice terms, matched as whole words, blocks a draft (`b6_*`); a value described on the wrong side of the lab's range blocks it too (`b5_*`).
+- **A physician approves the exact text:** only a physician may approve; the approval binds a hash of the text, and any change needs approving again (`c1_*` to `c7_*`).
+- **Sent once:** the notice goes through the engine's outbox; a crash mid-send never sends it twice (`d2_*`).
+- **Every step is logged** in an append-only audit log the database refuses to change (`e1_*`, `e2_*`).
+- **Each clinic sees only its own data** (`a4_*`).
+
+Each of the 38 acceptance criteria in [`docs/product/spec.md`](docs/product/spec.md) has tests named after it, and CI fails if a finished milestone's criterion has none passing ([the evidence pack](docs/evidence/m6.html)).
 
 ## Try it
 
