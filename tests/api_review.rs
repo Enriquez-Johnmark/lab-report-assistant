@@ -74,12 +74,12 @@ async fn b8_a_blocked_draft_shows_which_check_failed_for_which_test(pool: PgPool
         .map(|f| f.as_str().unwrap())
         .collect();
     assert_eq!(failures.len(), 1);
-    assert!(
-        failures[0].ends_with("(r1): the text contains a digit or a number in words"),
-        "{failures:?}"
-    );
+    // The physician reads the test's name, not the internal result ID.
     let first_test = report["results"][0]["test"].as_str().unwrap();
-    assert!(failures[0].starts_with(first_test), "names the test: {failures:?}");
+    assert_eq!(
+        failures[0],
+        format!("{first_test}: the text contains a digit or a number in words")
+    );
 }
 
 #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]

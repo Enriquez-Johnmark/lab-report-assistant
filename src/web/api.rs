@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use time::format_description::well_known::Rfc3339;
 
 use super::{AppState, SESSION_COOKIE, session_cookie};
+use crate::checks::Failure;
 use crate::demo_data;
 use crate::drafting::{Explanation, table};
 use crate::drafts::{Source, content_hash};
@@ -473,7 +474,7 @@ async fn detail(
                 text: e.text.clone(),
             })
             .collect(),
-        failures: draft.failures.iter().map(ToString::to_string).collect(),
+        failures: draft.failures.iter().map(Failure::for_people).collect(),
         warnings: draft.warnings,
         blocked: draft.blocked,
         rejected: draft.rejected,

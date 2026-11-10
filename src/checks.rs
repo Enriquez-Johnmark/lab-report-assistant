@@ -50,6 +50,17 @@ impl fmt::Display for Failure {
     }
 }
 
+impl Failure {
+    /// The failure as the physician reads it: the test's name, without the
+    /// internal result ID that the audit log keeps.
+    pub fn for_people(&self) -> String {
+        match &self.test {
+            Some(test) => format!("{test}: {}", self.detail),
+            None => self.to_string(),
+        }
+    }
+}
+
 /// Every check `explanations` fails for `results`; empty if it passes.
 pub fn check_draft(explanations: &[Explanation], results: &[StoredResult]) -> Vec<Failure> {
     let mut failures = Vec::new();
