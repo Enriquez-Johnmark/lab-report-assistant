@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Round 1 decided 2026-11-10; M1–M6 done. Version 2 (M7–M11) decided 2026-11-11.** The spec is [product/spec.md](product/spec.md); the engine is [Nudgewright](https://github.com/Enriquez-Johnmark/nudgewright) v0.4.5; the patterns reused come from [Kompleto](https://github.com/Enriquez-Johnmark/kompleto/blob/main/docs/architecture.md) and [Help Assistant](https://github.com/Enriquez-Johnmark/help-assistant).
+Status: **Round 1 decided 2026-11-10; M1–M6 done. Version 2 (M7–M11) decided 2026-11-11 and done the same day.** The spec is [product/spec.md](product/spec.md); the engine is [Nudgewright](https://github.com/Enriquez-Johnmark/nudgewright) v0.4.5; the patterns reused come from [Kompleto](https://github.com/Enriquez-Johnmark/kompleto/blob/main/docs/architecture.md) and [Help Assistant](https://github.com/Enriquez-Johnmark/help-assistant).
 
 ## What the engine already gives
 
@@ -81,4 +81,4 @@ One milestone at a time, test first, each criterion's test named by its ID.
 | M8 | Fetching from a FHIR server: the clinic's server address, "Fetch new lab reports", the fetch command, the fake server for tests and HAPI FHIR in CI | I1–I5 | done (2026-11-11) |
 | M9 | Several clinics: a second made-up clinic in the demo, side by side | J1, J2 | done (2026-11-11) |
 | M10 | PDF reports in the patient page's design | K1–K4 | done (2026-11-11) |
-| M11 | Version 2 showcase: README, screenshots, walkthrough video, portfolio page | none | planned |
+| M11 | Version 2 showcase: README, screenshots, walkthrough video, portfolio page | none | done (2026-11-11) |

@@ -2,7 +2,9 @@
 
 An AI assistant that turns a patient's lab results into a plain-language report a physician approves. Claude drafts it; code checks every number, unit and range against the lab data and refuses anything that reads as a diagnosis; the approved text is delivered once; every step is in an append-only audit log.
 
-**Status:** all six milestones done; all 38 acceptance criteria proven ([the evidence page](docs/evidence/m6.html)).
+**Status:** version 1 (M1–M6) and version 2 (M7–M11) done; all 49 acceptance criteria proven ([the evidence page](docs/evidence/m11.html)).
+
+### Version 1
 
 - **M1:** made-up lab data, strict FHIR import scoped to each clinic, and the evidence pack, which links each criterion to its passing tests.
 - **M2:** Claude drafts each imported report in a background job. The model sees only the results and writes no numbers; code blocks any draft that misses a result, invents one, contains a number, puts a value on the wrong side of the lab's range, or uses diagnosis, treatment or medication wording. Claude's answers are recorded, so the tests need no API key.
@@ -19,15 +21,25 @@ An AI assistant that turns a patient's lab results into a plain-language report 
 
   Haiku mostly fails by repeating test names that contain digits ("Free T4"). Of Sonnet's three failed drafts, two were blocked by the checks being cautious ("normal muscle activity" read as a placement; "not bound to proteins" read as a negation) and one for naming "ovarian reserve". Every failure was a draft held back, never one let through. The checks weren't tuned on these 30 reports, so the numbers stay honest.
 
-- **M6:** the showcase below.
+- **M6:** the first showcase.
+
+### Version 2
+
+- **M7:** a calmer, clinical look: one teal accent, warm greys, IBM Plex Sans, amber only for a value outside the lab's range and red only for a failed check. The patient's page reads like a letter from the clinic ([the UI audit](docs/ui-audit.md)).
+- **M8:** fetching lab reports from the clinic's FHIR server, tested against a real HAPI FHIR server in CI ([below](#where-the-data-comes-from)).
+- **M9:** several clinics on one server, each seeing only its own reports, Sent list and activity, and fetching only from its own FHIR server.
+- **M10:** the approved report as a PDF, for the patient and the physician ([a sample](docs/showcase/lab-report.pdf)).
+- **M11:** the showcase below, re-recorded for version 2.
 
 ## See it
 
-A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
+A two-and-a-half-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
 
 | The physician reviews Claude's draft beside the lab's own values | The patient's page, from the emailed link |
 |---|---|
 | ![Review](docs/showcase/desktop-2-review.png) | ![Patient's report on a phone](docs/showcase/phone-1-patient-report.png) |
+| **Lab reports fetched from the clinic's FHIR server** | **The approved report as a PDF** |
+| ![Fetching from the FHIR server](docs/showcase/desktop-11-fetch.png) | ![The PDF](docs/showcase/pdf-lab-report.png) |
 
 ## Where the data comes from
 
@@ -54,7 +66,7 @@ A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/w
 - **Every step is logged** in an append-only audit log the database refuses to change (`e1_*`, `e2_*`).
 - **Each clinic sees only its own data:** its lab reports, Sent list and activity, in the pages and the API; fetching for one clinic reads only its own FHIR server (`a4_*`, `j1_*`, `j2_*`). The demo runs two made-up clinics side by side.
 
-Each of the 49 acceptance criteria in [`docs/product/spec.md`](docs/product/spec.md) has tests named after it, and CI fails if a finished milestone's criterion has none passing ([the evidence pack](docs/evidence/m6.html)).
+Each of the 49 acceptance criteria in [`docs/product/spec.md`](docs/product/spec.md) has tests named after it, and CI fails if a finished milestone's criterion has none passing ([the evidence pack](docs/evidence/m11.html)).
 
 ## Try it
 

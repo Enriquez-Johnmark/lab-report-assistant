@@ -15,7 +15,7 @@ Each gate needs the owner's explicit "yes"; an approval for one phase never carr
 | 3. Spec & acceptance criteria | done, approved 2026-11-10 (`docs/product/spec.md`, 38 criteria) |
 | 4. Architecture | done, approved 2026-11-10 (`docs/architecture.md`) |
 | 5. Build | done (2026-11-10): M1–M6, all 38 criteria proven (`docs/architecture.md`, `docs/evidence/m6.html`) |
-| 6. Version 2 | **in progress**, approved 2026-11-11: M7 (a clinical look), M8 (fetching from a FHIR server), M9 (several clinics), M10 (PDF reports), M11 (showcase); 11 new criteria (`docs/product/spec.md`) |
+| 6. Version 2 | done (2026-11-11): M7 (a clinical look), M8 (fetching from a FHIR server), M9 (several clinics), M10 (PDF reports), M11 (showcase); all 49 criteria proven (`docs/product/spec.md`, `docs/evidence/m11.html`) |
 
 Code follows the build order in `docs/architecture.md`, one milestone at a time, once the owner says yes to the build.
 
