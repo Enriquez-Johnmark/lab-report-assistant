@@ -74,6 +74,7 @@ async fn f1_every_api_needs_a_login(pool: PgPool) {
         ("POST", format!("/api/lab-reports/{some_id}/reject")),
         ("GET", "/api/activity".to_owned()),
         ("POST", "/api/demo-data".to_owned()),
+        ("POST", "/api/fhir-server/fetch".to_owned()),
     ] {
         let answer = call(&app, method, &path, Some(json!({})), None).await;
         assert_eq!(answer.status, 401, "{method} {path}");

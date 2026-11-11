@@ -19,4 +19,8 @@ role: string,
 /**
  * A physician's name, e.g. "Dr. Example".
  */
-name: string | null, };
+name: string | null, 
+/**
+ * The clinic's FHIR server, if the operator has set one.
+ */
+fhir_server: string | null, };

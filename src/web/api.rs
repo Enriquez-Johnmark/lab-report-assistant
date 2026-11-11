@@ -26,6 +26,7 @@ use crate::engine::accounts::{Accounts, LoginLink, LoginOutcome, Role, SESSION_L
 use crate::engine::mail::Email;
 use crate::engine::outbox::NoExtraChecks;
 use crate::fhir::Flag;
+use crate::fhir_server::{FetchError, FetchOutcome, FhirServers};
 use crate::lab_reports::{ImportError, LabReportId};
 use crate::review::{AuditEntry, MAX_MODEL_DRAFTS, ReviewError};
 
@@ -45,6 +46,7 @@ pub(super) fn routes() -> Router<AppState> {
         .route("/api/lab-reports/{id}/reject", post(reject))
         .route("/api/activity", get(activity))
         .route("/api/demo-data", post(load_demo_data))
+        .route("/api/fhir-server/fetch", post(fetch_from_fhir_server))
         .route("/api/{*rest}", any(not_found))
 }
 
@@ -266,6 +268,8 @@ pub struct Me {
     pub role: &'static str,
     /// A physician's name, e.g. "Dr. Example".
     pub name: Option<String>,
+    /// The clinic's FHIR server, if the operator has set one.
+    pub fhir_server: Option<String>,
 }
 
 async fn me(State(state): State<AppState>, ApiMember(member): ApiMember) -> Result<Json<Me>, ApiError> {
@@ -279,11 +283,16 @@ async fn me(State(state): State<AppState>, ApiMember(member): ApiMember) -> Resu
         (None, Role::Owner) => "administrator",
         (None, Role::Staff) => "staff",
     };
+    let fhir_server = FhirServers::new(state.pool.clone(), state.clock.clone())
+        .get(member.tenant)
+        .await
+        .map_err(ApiError::internal)?;
     Ok(Json(Me {
         clinic_name: account.name,
         email: member.email,
         role,
         name,
+        fhir_server: fhir_server.map(|address| address.to_string()),
     }))
 }
 
@@ -730,4 +739,32 @@ async fn load_demo_data(
         imported,
         already_there,
     }))
+}
+
+/// I1: the administrator fetches the clinic's new lab reports from its FHIR
+/// server; drafting starts for each one imported.
+async fn fetch_from_fhir_server(
+    State(state): State<AppState>,
+    ApiMember(member): ApiMember,
+) -> Result<Json<FetchOutcome>, ApiError> {
+    if member.role != Role::Owner {
+        return Err(ApiError::Refused(
+            StatusCode::FORBIDDEN,
+            "Only the administrator can fetch lab reports.".into(),
+        ));
+    }
+    let servers = FhirServers::new(state.pool.clone(), state.clock.clone());
+    match servers.fetch(member.tenant, &member.email).await {
+        Ok(outcome) => Ok(Json(outcome)),
+        Err(FetchError::Database(err)) => Err(ApiError::internal(err)),
+        Err(FetchError::NoServer) => Err(ApiError::Refused(
+            StatusCode::CONFLICT,
+            "There's no FHIR server set for this clinic yet. The operator sets it with `clinic set-fhir-server`."
+                .into(),
+        )),
+        Err(err) => Err(ApiError::Refused(
+            StatusCode::BAD_GATEWAY,
+            format!("Nothing was imported: {err}."),
+        )),
+    }
 }
