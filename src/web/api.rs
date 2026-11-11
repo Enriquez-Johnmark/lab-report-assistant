@@ -570,11 +570,6 @@ async fn report_pdf(
     ApiMember(member): ApiMember,
     ReportPath(id): ReportPath,
 ) -> Result<Response, ApiError> {
-    // Another clinic's report is not found, as everywhere (A4).
-    state.reports.source(member.tenant, id).await.map_err(|err| match err {
-        ImportError::NotFound => ApiError::NotFound,
-        other => ApiError::internal(other),
-    })?;
     let clinic = Accounts::new(state.pool.clone(), state.clock.clone())
         .get(member.tenant)
         .await
@@ -585,6 +580,12 @@ async fn report_pdf(
     {
         Approved::Current(letter) => letter,
         Approved::No => {
+            // An approval is always the clinic's own, so only here can the
+            // report be another clinic's: not found, as everywhere (A4).
+            state.reports.source(member.tenant, id).await.map_err(|err| match err {
+                ImportError::NotFound => ApiError::NotFound,
+                other => ApiError::internal(other),
+            })?;
             return Err(ApiError::Refused(
                 StatusCode::CONFLICT,
                 "This report isn't approved yet, so there's no PDF.".into(),

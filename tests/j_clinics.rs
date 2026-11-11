@@ -85,6 +85,7 @@ async fn j1_each_clinics_staff_sees_only_its_own_reports_sent_list_and_activity(
             format!("/api/lab-reports/{other}"),
             format!("/api/lab-reports/{other}/timeline"),
             format!("/api/lab-reports/{other}/fhir"),
+            format!("/api/lab-reports/{other}/pdf"),
         ] {
             let answer = call(&app, "GET", &path, None, Some(&doctor)).await;
             assert_eq!(answer.status, 404, "{who}: {path}");
