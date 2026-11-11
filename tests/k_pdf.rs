@@ -107,8 +107,12 @@ impl Setup {
 
     /// The physician downloads the PDF from the Sent list.
     async fn physician_pdf(&self, id: &str) -> Got {
-        self.send(axum::http::Request::get(format!("/api/lab-reports/{id}/pdf")).header("cookie", &self.doctor))
-            .await
+        self.send(
+            axum::http::Request::post(format!("/api/lab-reports/{id}/pdf"))
+                .header("cookie", &self.doctor)
+                .header("origin", common::BASE_URL),
+        )
+        .await
     }
 
     async fn audit(&self, action: &str) -> Vec<String> {
@@ -285,4 +289,20 @@ async fn k4_every_pdf_download_is_in_the_audit_log(pool: PgPool) {
         s.audit("lab_report.pdf_downloaded").await,
         ["patient", "dr.example@example.test"]
     );
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn k4_only_fetching_the_pdf_address_downloads_and_logs_nothing(pool: PgPool) {
+    let s = setup(pool).await;
+    let report = s.report(0).await;
+    s.approve(&report).await;
+    let id = report["id"].as_str().unwrap();
+
+    // As a browser prefetching the Sent list's links would.
+    let got = s
+        .send(axum::http::Request::get(format!("/api/lab-reports/{id}/pdf")).header("cookie", &s.doctor))
+        .await;
+
+    assert_eq!(got.status, 405);
+    assert!(s.audit("lab_report.pdf_downloaded").await.is_empty());
 }

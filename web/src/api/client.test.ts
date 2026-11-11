@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { api, ApiError } from "@/api/client"
+import { api, ApiError, apiFile } from "@/api/client"
 
 function answer(status: number, body: unknown) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })))
@@ -59,5 +59,20 @@ describe("api", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Bad gateway", { status: 502 })))
     const error = (await api("GET", "/api/me").catch((e: unknown) => e)) as ApiError
     expect(error.message).toMatch(/couldn't be reached/)
+  })
+})
+
+describe("apiFile", () => {
+  it("returns the file the API sends", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("%PDF-1.3", { status: 200 })))
+    const file = await apiFile("POST", "/api/lab-reports/1/pdf")
+    await expect(file.text()).resolves.toBe("%PDF-1.3")
+  })
+
+  it("turns a refusal into an ApiError in the API's words, not a file", async () => {
+    answer(409, { message: "This report isn't approved yet, so there's no PDF.", problems: [] })
+    await expect(apiFile("POST", "/api/lab-reports/1/pdf")).rejects.toThrow(
+      "This report isn't approved yet, so there's no PDF."
+    )
   })
 })

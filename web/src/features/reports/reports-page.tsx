@@ -1,5 +1,8 @@
 import { DatabaseIcon, FileDownIcon } from "lucide-react"
+import { useState } from "react"
 import { Link, useLocation } from "react-router"
+
+import { ApiError, apiFile } from "@/api/client"
 
 import type { LabReportRow } from "@/api/generated/LabReportRow"
 import { useMe } from "@/app/queries"
@@ -48,6 +51,45 @@ function QueueSummary({ reports }: { reports: LabReportRow[] }) {
         </span>
       ))}
     </p>
+  )
+}
+
+/** K1: the approved text as a PDF. The API refuses one whose approved text
+ *  no longer stands (K3); its reason is shown here, never saved as a file. */
+function PdfDownload({ id, patient }: { id: string; patient: string }) {
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function download() {
+    setBusy(true)
+    setProblem(null)
+    try {
+      const url = URL.createObjectURL(await apiFile("POST", `/api/lab-reports/${id}/pdf`))
+      const link = document.createElement("a")
+      link.href = url
+      link.download = "lab-report.pdf"
+      link.click()
+      // Long enough for the browser to start saving it.
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch (error) {
+      setProblem(error instanceof ApiError ? error.message : "The PDF couldn't be made. Try again.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button variant="link" size="sm" className="h-auto px-0" disabled={busy} onClick={download}>
+        {busy ? <Spinner /> : <FileDownIcon aria-hidden />}
+        PDF<span className="sr-only"> of {patient}'s report</span>
+      </Button>
+      {problem ? (
+        <p role="alert" className="max-w-56 text-right text-xs text-destructive">
+          {problem}
+        </p>
+      ) : null}
+    </div>
   )
 }
 
@@ -164,16 +206,7 @@ export function ReportsPage() {
                       </TableCell>
                       {isSentView ? (
                         <TableCell className="text-right">
-                          {/* K1: the approved text as a PDF; the API refuses one
-                              whose approved text no longer stands. */}
-                          <a
-                            href={`/api/lab-reports/${report.id}/pdf`}
-                            download
-                            className="inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline"
-                          >
-                            <FileDownIcon aria-hidden className="size-4" />
-                            PDF<span className="sr-only"> of {report.patient_name}'s report</span>
-                          </a>
+                          <PdfDownload id={report.id} patient={report.patient_name} />
                         </TableCell>
                       ) : null}
                     </TableRow>

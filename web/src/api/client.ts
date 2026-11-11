@@ -39,6 +39,14 @@ export async function api<T>(method: Method, path: string, body?: unknown): Prom
   return (text === "" ? undefined : JSON.parse(text)) as T
 }
 
+/** Asks the Rust API for a file, such as a PDF: the file, or an ApiError
+ *  in the API's words when it refuses. */
+export async function apiFile(method: Method, path: string): Promise<Blob> {
+  const response = await fetch(path, { method, credentials: "same-origin" })
+  if (!response.ok) throw new ApiError(response.status, await errorBody(response))
+  return response.blob()
+}
+
 async function errorBody(response: Response): Promise<ErrorBody> {
   try {
     const body = (await response.json()) as Partial<ErrorBody>

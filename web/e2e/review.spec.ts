@@ -52,7 +52,7 @@ test("the physician approves a draft, the patient opens it, and an edit that lea
   // K1: so can the physician, from the Sent list.
   const [physicianPdf] = await Promise.all([
     page.waitForEvent("download"),
-    sentRow.getByRole("link", { name: /PDF/ }).click(),
+    sentRow.getByRole("button", { name: /PDF/ }).click(),
   ])
   expect(physicianPdf.suggestedFilename()).toBe("lab-report.pdf")
 

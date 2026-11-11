@@ -81,13 +81,13 @@ async fn j1_each_clinics_staff_sees_only_its_own_reports_sent_list_and_activity(
         assert_eq!(ids, [own.to_string()], "{who} lists only its own");
         // That one is approved: the clinic's Sent list holds only its own.
         assert_ne!(listed[0]["status"], "waiting", "{who}'s own report is in its Sent list");
-        for path in [
-            format!("/api/lab-reports/{other}"),
-            format!("/api/lab-reports/{other}/timeline"),
-            format!("/api/lab-reports/{other}/fhir"),
-            format!("/api/lab-reports/{other}/pdf"),
+        for (method, path) in [
+            ("GET", format!("/api/lab-reports/{other}")),
+            ("GET", format!("/api/lab-reports/{other}/timeline")),
+            ("GET", format!("/api/lab-reports/{other}/fhir")),
+            ("POST", format!("/api/lab-reports/{other}/pdf")),
         ] {
-            let answer = call(&app, "GET", &path, None, Some(&doctor)).await;
+            let answer = call(&app, method, &path, None, Some(&doctor)).await;
             assert_eq!(answer.status, 404, "{who}: {path}");
         }
         // The other clinic's real draft and hash: still not found.

@@ -41,7 +41,7 @@ pub(super) fn routes() -> Router<AppState> {
         .route("/api/lab-reports/{id}", get(detail))
         .route("/api/lab-reports/{id}/timeline", get(timeline))
         .route("/api/lab-reports/{id}/fhir", get(fhir_source))
-        .route("/api/lab-reports/{id}/pdf", get(report_pdf))
+        .route("/api/lab-reports/{id}/pdf", post(report_pdf))
         .route("/api/lab-reports/{id}/approve", post(approve))
         .route("/api/lab-reports/{id}/edit", post(edit))
         .route("/api/lab-reports/{id}/write", post(write))
@@ -565,6 +565,7 @@ async fn fhir_source(
 
 /// K1: the approved report as a PDF, for the clinic's staff (the Sent
 /// list); only while the approved text still stands (K3), and logged (K4).
+/// A POST, so a prefetched link never logs a download nobody made.
 async fn report_pdf(
     State(state): State<AppState>,
     ApiMember(member): ApiMember,
