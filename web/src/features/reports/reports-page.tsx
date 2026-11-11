@@ -1,4 +1,4 @@
-import { DatabaseIcon } from "lucide-react"
+import { DatabaseIcon, FileDownIcon } from "lucide-react"
 import { Link, useLocation } from "react-router"
 
 import type { LabReportRow } from "@/api/generated/LabReportRow"
@@ -133,6 +133,7 @@ export function ReportsPage() {
                   <TableHead className="hidden sm:table-cell">Lab report</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Imported</TableHead>
+                  {isSentView ? <TableHead className="text-right">Report</TableHead> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -161,6 +162,20 @@ export function ReportsPage() {
                       <TableCell className="hidden text-muted-foreground md:table-cell">
                         {formatDateTime(report.imported_at)}
                       </TableCell>
+                      {isSentView ? (
+                        <TableCell className="text-right">
+                          {/* K1: the approved text as a PDF; the API refuses one
+                              whose approved text no longer stands. */}
+                          <a
+                            href={`/api/lab-reports/${report.id}/pdf`}
+                            download
+                            className="inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline"
+                          >
+                            <FileDownIcon aria-hidden className="size-4" />
+                            PDF<span className="sr-only"> of {report.patient_name}'s report</span>
+                          </a>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   )
                 })}

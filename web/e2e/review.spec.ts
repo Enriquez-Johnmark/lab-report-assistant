@@ -40,10 +40,21 @@ test("the physician approves a draft, the patient opens it, and an edit that lea
   await page.getByRole("button", { name: "Show my report" }).click()
   await expect(page.getByText("Made-up demo: not a real patient")).toBeVisible()
   await expect(page.getByText(/reviewed and approved by Dr\. Example/)).toBeVisible()
+  // K1: the patient downloads it as a PDF.
+  const [patientPdf] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download as PDF" }).click(),
+  ])
+  expect(patientPdf.suggestedFilename()).toBe("lab-report.pdf")
   await page.goto("/sent")
-  await expect(page.getByRole("row").filter({ hasText: patient })).toContainText(
-    "Opened by the patient"
-  )
+  const sentRow = page.getByRole("row").filter({ hasText: patient })
+  await expect(sentRow).toContainText("Opened by the patient")
+  // K1: so can the physician, from the Sent list.
+  const [physicianPdf] = await Promise.all([
+    page.waitForEvent("download"),
+    sentRow.getByRole("link", { name: /PDF/ }).click(),
+  ])
+  expect(physicianPdf.suggestedFilename()).toBe("lab-report.pdf")
 
   await page.goto("/")
   await ready.first().getByRole("link").click()
