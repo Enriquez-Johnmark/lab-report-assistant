@@ -121,7 +121,7 @@ impl Setup {
 }
 
 /// The text a PDF draws, line by line: each `<hex> Tj` string, decoded from
-/// the PDF's single-byte (WinAnsi) encoding.
+/// the built-in font's single-byte WinAnsi encoding.
 fn pdf_text(pdf: &[u8]) -> Vec<String> {
     let content = String::from_utf8_lossy(pdf);
     let mut lines = Vec::new();
@@ -133,12 +133,7 @@ fn pdf_text(pdf: &[u8]) -> Vec<String> {
             .step_by(2)
             .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap())
             .collect();
-        lines.push(
-            bytes
-                .iter()
-                .map(|&b| if b == 0xB7 { '·' } else { char::from(b) })
-                .collect(),
-        );
+        lines.push(printpdf::lopdf::Document::decode_text(Some("WinAnsiEncoding"), &bytes));
         rest = &rest[end + 4..];
     }
     lines
@@ -202,6 +197,38 @@ async fn k2_the_pdf_holds_exactly_the_approved_text_the_lab_values_the_banner_an
         let value = format!("{} {}", row["value"].as_str().unwrap(), row["unit"].as_str().unwrap());
         assert!(text.contains(&value), "missing value {value}\n{text}");
     }
+}
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn k2_a_character_the_pdf_font_lacks_becomes_its_nearest_equivalent_never_nothing(pool: PgPool) {
+    let s = setup(pool).await;
+    let report = s.report(0).await;
+    let id = report["id"].as_str().unwrap();
+    // Curly quotes, a dash and µ are in the font; Greek mu, ≤, ≥, the minus
+    // sign and a smiley are not.
+    let written = "Here’s “your” result – µ μ ≤ ≥ − ☺ Within the lab's range.";
+    let explanations: Vec<Value> = report["results"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| json!({ "result": r["result"], "text": written }))
+        .collect();
+    call(
+        &s.app,
+        "POST",
+        &format!("/api/lab-reports/{id}/edit"),
+        Some(json!({ "explanations": explanations })),
+        Some(&s.doctor),
+    )
+    .await;
+    let link = s.approve(&s.report(0).await).await;
+
+    let text = joined(&s.patient_pdf(&link).await.body);
+
+    assert!(
+        text.contains("Here’s “your” result – µ µ <= >= - ? Within the lab's range."),
+        "{text}"
+    );
 }
 
 #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]

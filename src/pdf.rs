@@ -145,7 +145,7 @@ impl Pen {
     fn text(&self, text: &str, x: f32, y: f32, size: f32, bold: bool, color: (f32, f32, f32)) {
         self.layer.set_fill_color(rgb(color));
         let font = if bold { &self.fonts.bold } else { &self.fonts.regular };
-        self.layer.use_text(text, size, Mm(x), Mm(y), font);
+        self.layer.use_text(printable(text), size, Mm(x), Mm(y), font);
     }
 
     /// `text` wrapped to `width`, from the pen down.
@@ -179,6 +179,30 @@ impl Pen {
 
 fn rgb((r, g, b): (f32, f32, f32)) -> Color {
     Color::Rgb(Rgb::new(r, g, b, None))
+}
+
+/// `text` as the built-in font can draw it. It speaks WinAnsi only, and
+/// printpdf silently drops any character outside it, which would change the
+/// approved text (K2); so a missing character becomes its nearest
+/// equivalent, or a visible "?", never nothing.
+fn printable(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        let mut one = [0; 4];
+        if !printpdf::lopdf::Document::encode_text(Some("WinAnsiEncoding"), c.encode_utf8(&mut one)).is_empty() {
+            out.push(c);
+            continue;
+        }
+        out.push_str(match c {
+            'μ' => "µ",
+            '≤' => "<=",
+            '≥' => ">=",
+            '−' | '‐' | '‑' | '‒' => "-",
+            c if c.is_whitespace() => " ",
+            _ => "?",
+        });
+    }
+    out
 }
 
 /// About how wide `text` is in Helvetica at `size` points, in mm.
