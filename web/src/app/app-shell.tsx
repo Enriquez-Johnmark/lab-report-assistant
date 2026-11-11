@@ -1,113 +1,101 @@
 import { useMutation } from "@tanstack/react-query"
-import { FileTextIcon, HistoryIcon, LogOutIcon, SendIcon, type LucideIcon } from "lucide-react"
 import { Navigate, NavLink, Outlet, useLocation } from "react-router"
 
 import { api, ApiError } from "@/api/client"
 import { useMe } from "@/app/queries"
 import { Logo } from "@/components/logo"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
-type NavItem = { to: string; label: string; icon: LucideIcon }
+type NavItem = { to: string; label: string }
 
-const reports: NavItem = { to: "/", label: "Lab reports", icon: FileTextIcon }
-const sent: NavItem = { to: "/sent", label: "Sent", icon: SendIcon }
-const activity: NavItem = { to: "/activity", label: "Activity", icon: HistoryIcon }
+const reports: NavItem = { to: "/", label: "Lab reports" }
+const sent: NavItem = { to: "/sent", label: "Sent" }
+const activity: NavItem = { to: "/activity", label: "Activity" }
 
-/** The logged-in frame: navigation beside (or, on a phone, above) the page. */
+/** The logged-in frame: a letterhead across the top, as on the clinic's own
+ *  paper (the product, then the clinic and who is logged in), with the
+ *  places beneath it, and the page below. */
 export function AppShell() {
   const me = useMe()
   // Only an ended session means logging in again; anything else (a deploy, a
   // dropped connection) is retried while the person stays where they are.
   if (me.error instanceof ApiError && me.error.isNotLoggedIn)
     return <Navigate to="/login" replace />
+  const items = me.data?.role === "administrator" ? [reports, sent, activity] : [reports, sent]
   return (
-    <SidebarProvider>
-      <Sidebar>
-        <SidebarHeader>
-          <Logo className="px-2 py-1.5" />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <NavMenuItem item={reports} />
-                <NavMenuItem item={sent} />
-                {me.data?.role === "administrator" ? <NavMenuItem item={activity} /> : null}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <AccountMenu
+    <div className="flex min-h-svh flex-col">
+      <header className="border-b bg-card">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pt-3 md:px-8">
+          <Logo />
+          <Account
             clinicName={me.data?.clinic_name}
             who={me.data ? (me.data.name ?? me.data.email) : undefined}
           />
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b px-4 md:hidden">
-          <SidebarTrigger />
-          <Logo />
-        </header>
-        <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-8">
-          <Outlet />
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+        </div>
+        <nav aria-label="Places" className="mx-auto w-full max-w-6xl px-4 md:px-8">
+          <ul className="-mb-px flex gap-6 overflow-x-auto">
+            {items.map((item) => (
+              <NavItemLink key={item.to} item={item} />
+            ))}
+          </ul>
+        </nav>
+      </header>
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+        <Outlet />
+      </main>
+    </div>
   )
 }
 
-function NavMenuItem({ item }: { item: NavItem }) {
+function NavItemLink({ item }: { item: NavItem }) {
   const { pathname } = useLocation()
-  const isActive = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)
-  const Icon = item.icon
+  const isActive =
+    item.to === "/"
+      ? pathname === "/" || pathname.startsWith("/reports")
+      : pathname.startsWith(item.to)
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton isActive={isActive} render={<NavLink to={item.to} />}>
-        <Icon />
-        <span>{item.label}</span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <li>
+      <NavLink
+        to={item.to}
+        aria-current={isActive ? "page" : undefined}
+        className={cn(
+          "block border-b-2 py-3 text-sm whitespace-nowrap transition-colors",
+          isActive
+            ? "border-primary font-medium text-foreground"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {item.label}
+      </NavLink>
+    </li>
   )
 }
 
-function AccountMenu({ clinicName, who }: { clinicName?: string; who?: string }) {
+function Account({ clinicName, who }: { clinicName?: string; who?: string }) {
   const logOut = useMutation({
     mutationFn: () => api("POST", "/api/logout"),
     onSettled: () => location.assign("/login"),
   })
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <div className="flex flex-col gap-0.5 px-2 py-1.5 text-sm">
-          {clinicName ? (
-            <span className="truncate font-medium">{clinicName}</span>
-          ) : (
-            <Skeleton className="h-4 w-32" />
-          )}
-          {who ? <span className="truncate text-xs text-muted-foreground">{who}</span> : null}
-        </div>
-      </SidebarMenuItem>
-      <SidebarMenuItem>
-        <SidebarMenuButton onClick={() => logOut.mutate()} disabled={logOut.isPending}>
-          <LogOutIcon />
-          <span>Log out</span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <div className="flex items-center gap-4">
+      <div className="flex flex-col text-sm leading-tight sm:items-end">
+        {clinicName ? (
+          <span className="font-medium">{clinicName}</span>
+        ) : (
+          <Skeleton className="h-4 w-32" />
+        )}
+        {who ? <span className="text-xs text-muted-foreground">{who}</span> : null}
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => logOut.mutate()}
+        disabled={logOut.isPending}
+      >
+        Log out
+      </Button>
+    </div>
   )
 }
