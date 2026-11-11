@@ -157,9 +157,11 @@ export function ReportsPage() {
           <EmptyHeader>
             <EmptyTitle>No lab reports yet</EmptyTitle>
             <EmptyDescription>
-              {me.data?.role === "administrator"
-                ? "Load the 30 made-up demo reports to try it, or import FHIR files from the command line."
-                : "Lab reports appear here once the clinic's administrator imports them."}
+              {me.data?.role !== "administrator"
+                ? "Lab reports appear here once the clinic's administrator imports them."
+                : me.data.fhir_server
+                  ? "Fetch them from the clinic's FHIR server, or load the 30 made-up demo reports to try it."
+                  : "Load the 30 made-up demo reports to try it, or import FHIR files from the command line."}
             </EmptyDescription>
           </EmptyHeader>
           {me.data?.role === "administrator" ? <EmptyContent>{loadDemo}</EmptyContent> : null}
