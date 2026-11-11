@@ -11,7 +11,7 @@ import { SaveError } from "@/components/save-error"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Section } from "@/components/section"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import {
@@ -54,23 +54,27 @@ export function ReportPage() {
         {data.approved_at ? "Sent" : "Lab reports"}
       </Link>
       <PageHeader title={data.patient_name} description={data.name} />
-      <DraftStatus report={data} />
-      {mode === "read" ? (
-        <ResultsTable report={data} />
-      ) : (
-        <TextEditor
-          key={`${data.draft?.id ?? "none"}-${mode}`}
-          report={data}
-          byHand={mode === "write"}
-          onDone={() => setMode("read")}
-        />
-      )}
-      {isPhysician && mode === "read" ? <Actions report={data} onEdit={setMode} /> : null}
-      {!isPhysician && me.data ? (
-        <p className="text-sm text-muted-foreground">
-          Only a physician can approve or change this report.
-        </p>
-      ) : null}
+      {/* The report sheet: the draft's state, the lab's values beside the
+          explanations, and what the physician can do with them. */}
+      <section aria-label="Report" className="overflow-hidden rounded-lg border bg-card">
+        <DraftStatus report={data} />
+        {mode === "read" ? (
+          <ResultsTable report={data} />
+        ) : (
+          <TextEditor
+            key={`${data.draft?.id ?? "none"}-${mode}`}
+            report={data}
+            byHand={mode === "write"}
+            onDone={() => setMode("read")}
+          />
+        )}
+        {isPhysician && mode === "read" ? <Actions report={data} onEdit={setMode} /> : null}
+        {!isPhysician && me.data ? (
+          <p className="border-t bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+            Only a physician can approve or change this report.
+          </p>
+        ) : null}
+      </section>
       <FhirSourceCard id={id} />
       <Timeline id={id} />
     </>
@@ -81,21 +85,23 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
   const draft = report.draft
   if (!draft) {
     return (
-      <Alert>
-        <Spinner />
-        <AlertTitle>Drafting</AlertTitle>
-        <AlertDescription>The draft appears here when it's ready.</AlertDescription>
-      </Alert>
+      <div className="p-4">
+        <Alert className="border-0 bg-muted">
+          <Spinner />
+          <AlertTitle>Drafting</AlertTitle>
+          <AlertDescription>The draft appears here when it's ready.</AlertDescription>
+        </Alert>
+      </div>
     )
   }
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <Badge variant="outline">Draft {draft.attempt}</Badge>
-        <span>{sourceLabel(draft.source)}</span>
-      </div>
+    <div className="flex flex-col gap-3 border-b px-4 py-3 empty:hidden">
+      <p className="text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">Draft {draft.attempt}</span> ·{" "}
+        {sourceLabel(draft.source)}
+      </p>
       {draft.rejected ? (
-        <Alert>
+        <Alert className="border-0 bg-muted">
           <Spinner />
           <AlertTitle>A new draft is being written</AlertTitle>
           <AlertDescription>
@@ -105,7 +111,7 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
         </Alert>
       ) : null}
       {report.approved_at ? (
-        <Alert>
+        <Alert className="border-0 bg-muted">
           <CircleCheckIcon />
           <AlertTitle>Approved</AlertTitle>
           <AlertDescription>
@@ -114,7 +120,7 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
         </Alert>
       ) : null}
       {draft.blocked ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="border-0 bg-destructive/[0.06]">
           <CircleAlertIcon />
           <AlertTitle>This draft failed a check, so it can't be approved</AlertTitle>
           <AlertDescription>
@@ -127,7 +133,7 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
         </Alert>
       ) : null}
       {draft.warnings.length > 0 ? (
-        <Alert variant="warning">
+        <Alert variant="warning" className="border-0 bg-warning/10">
           <TriangleAlertIcon />
           <AlertTitle>Wording the model wouldn't be allowed</AlertTitle>
           <AlertDescription>
@@ -150,9 +156,14 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
 function ResultsTable({ report }: { report: LabReportDetail }) {
   const explanation = (result: string) =>
     report.draft?.explanations.find((e) => e.result === result)?.text
-  const flag = (row: ResultRow) => (
-    <Badge variant={row.flag === "normal" ? "secondary" : "warning"}>{flagLabel(row.flag)}</Badge>
-  )
+  // As on a printed lab report: "Within range" is quiet text; a value
+  // outside the range is bold, with its flag in words on a tinted label.
+  const flag = (row: ResultRow) =>
+    row.flag === "normal" ? (
+      <span className="text-xs text-muted-foreground">{flagLabel(row.flag)}</span>
+    ) : (
+      <Badge variant="warning">{flagLabel(row.flag)}</Badge>
+    )
   const value = (row: ResultRow) => (
     <span className={cn("tabular-nums", row.flag !== "normal" && "font-semibold")}>
       {row.value} {row.unit}
@@ -163,24 +174,23 @@ function ResultsTable({ report }: { report: LabReportDetail }) {
       <div className="hidden md:block">
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               <TableHead>Test</TableHead>
-              <TableHead className="text-right">Value</TableHead>
+              <TableHead className="text-right">Result</TableHead>
               <TableHead>Lab's range</TableHead>
               <TableHead className="min-w-64">Explanation for the patient</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {report.results.map((row) => (
-              <TableRow key={row.result} className="align-top">
-                <TableCell className="font-medium whitespace-normal">{row.test}</TableCell>
-                <TableCell className="text-right">{value(row)}</TableCell>
-                <TableCell className="whitespace-normal">
+              <TableRow key={row.result} className="align-top hover:bg-transparent">
+                <TableCell className="py-3 font-medium whitespace-normal">{row.test}</TableCell>
+                <TableCell className="py-3 text-right">{value(row)}</TableCell>
+                <TableCell className="py-3 whitespace-normal">
                   <span className="tabular-nums">{row.range}</span>
-                  <br />
-                  {flag(row)}
+                  <div className="mt-1">{flag(row)}</div>
                 </TableCell>
-                <TableCell className="whitespace-normal">
+                <TableCell className="py-3 leading-relaxed whitespace-normal">
                   {explanation(row.result) ?? "—"}
                 </TableCell>
               </TableRow>
@@ -188,9 +198,9 @@ function ResultsTable({ report }: { report: LabReportDetail }) {
           </TableBody>
         </Table>
       </div>
-      <ul className="flex flex-col divide-y border-y md:hidden">
+      <ul className="flex flex-col divide-y md:hidden">
         {report.results.map((row) => (
-          <li key={row.result} className="flex flex-col gap-2 py-4">
+          <li key={row.result} className="flex flex-col gap-2 px-4 py-4">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="font-medium">{row.test}</span>
               {value(row)}
@@ -201,7 +211,7 @@ function ResultsTable({ report }: { report: LabReportDetail }) {
               </span>
               {flag(row)}
             </div>
-            <p className="text-sm">{explanation(row.result) ?? "—"}</p>
+            <p className="text-sm leading-relaxed">{explanation(row.result) ?? "—"}</p>
           </li>
         ))}
       </ul>
@@ -235,11 +245,11 @@ function TextEditor({
   }))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{byHand ? "Write the report by hand" : "Edit the draft"}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-4">
+      <h2 className="text-base font-semibold">
+        {byHand ? "Write the report by hand" : "Edit the draft"}
+      </h2>
+      <div className="flex flex-col gap-4">
         {report.results.map((row) => (
           <div key={row.result} className="flex flex-col gap-1.5">
             <label htmlFor={`text-${row.result}`} className="text-sm font-medium">
@@ -271,8 +281,8 @@ function TextEditor({
             Cancel
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -286,7 +296,7 @@ function Actions({
   const approve = useApprove(report.id)
   const draft = report.draft
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 border-t bg-muted/50 px-4 py-3">
       {approve.isError ? <SaveError error={approve.error} /> : null}
       <div className="flex flex-wrap gap-2">
         {draft && !draft.blocked && !draft.rejected && !report.approved_at ? (
@@ -317,32 +327,25 @@ function Actions({
 function Timeline({ id }: { id: string }) {
   const timeline = useTimeline(id)
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Timeline</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {timeline.isPending ? (
-          <Skeleton className="h-24 w-full" />
-        ) : timeline.isError ? (
-          <QueryError error={timeline.error} />
-        ) : (
-          <ol className="flex flex-col gap-2 text-sm">
-            {timeline.data.map((entry, index) => (
-              <li key={`${entry.at}-${index}`} className="flex flex-wrap gap-x-3">
-                <span className="text-muted-foreground tabular-nums">
-                  {formatDateTime(entry.at)}
-                </span>
-                <span className="font-medium">{actionLabel(entry.action)}</span>
-                <span className="text-muted-foreground">by {entry.actor}</span>
-                {typeof entry.details.detail === "string" ? (
-                  <span>{entry.details.detail}</span>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        )}
-      </CardContent>
-    </Card>
+    <Section title="Timeline">
+      {timeline.isPending ? (
+        <Skeleton className="h-24 w-full" />
+      ) : timeline.isError ? (
+        <QueryError error={timeline.error} />
+      ) : (
+        <ol className="flex flex-col gap-2 text-sm">
+          {timeline.data.map((entry, index) => (
+            <li key={`${entry.at}-${index}`} className="flex flex-wrap gap-x-3">
+              <span className="text-muted-foreground tabular-nums">{formatDateTime(entry.at)}</span>
+              <span className="font-medium">{actionLabel(entry.action)}</span>
+              <span className="text-muted-foreground">by {entry.actor}</span>
+              {typeof entry.details.detail === "string" ? (
+                <span>{entry.details.detail}</span>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      )}
+    </Section>
   )
 }

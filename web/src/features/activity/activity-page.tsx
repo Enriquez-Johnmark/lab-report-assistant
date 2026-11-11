@@ -96,35 +96,37 @@ export function ActivityPage() {
           {actor || action ? "Nothing matches these filters." : "Nothing has happened yet."}
         </p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>When</TableHead>
-              <TableHead>Step</TableHead>
-              <TableHead>Who</TableHead>
-              <TableHead>Lab report</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {activity.data.map((entry, index) => (
-              <TableRow key={`${entry.at}-${index}`}>
-                <TableCell className="text-muted-foreground tabular-nums">
-                  {formatDateTime(entry.at)}
-                </TableCell>
-                <TableCell>{actionLabel(entry.action)}</TableCell>
-                <TableCell>{entry.actor}</TableCell>
-                <TableCell>
-                  <Link
-                    to={`/reports/${entry.lab_report}`}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {reportName(entry.lab_report)}
-                  </Link>
-                </TableCell>
+        <div className="overflow-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Step</TableHead>
+                <TableHead>Who</TableHead>
+                <TableHead>Lab report</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {activity.data.map((entry, index) => (
+                <TableRow key={`${entry.at}-${index}`}>
+                  <TableCell className="text-muted-foreground tabular-nums">
+                    {formatDateTime(entry.at)}
+                  </TableCell>
+                  <TableCell>{actionLabel(entry.action)}</TableCell>
+                  <TableCell>{entry.actor}</TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/reports/${entry.lab_report}`}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {reportName(entry.lab_report)}
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </>
   )

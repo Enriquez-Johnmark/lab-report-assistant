@@ -6,7 +6,7 @@ import { useMe } from "@/app/queries"
 import { PageHeader } from "@/components/page-header"
 import { QueryError } from "@/components/query-error"
 import { SaveError } from "@/components/save-error"
-import { Badge } from "@/components/ui/badge"
+import { Status } from "@/components/status"
 import { Button } from "@/components/ui/button"
 import {
   Empty,
@@ -120,45 +120,47 @@ export function ReportsPage() {
       ) : (
         <>
           {isSentView ? null : <QueueSummary reports={reports.data} />}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Patient</TableHead>
-                <TableHead className="hidden sm:table-cell">Lab report</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Imported</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(shown ?? []).map((report) => {
-                const status = statusLabel(report.status)
-                return (
-                  <TableRow key={report.id}>
-                    <TableCell className="font-medium">
-                      <Link
-                        to={`/reports/${report.id}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {report.patient_name}
-                      </Link>
-                      {/* On a phone the lab report sits under the patient, so
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Patient</TableHead>
+                  <TableHead className="hidden sm:table-cell">Lab report</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden md:table-cell">Imported</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(shown ?? []).map((report) => {
+                  const status = statusLabel(report.status)
+                  return (
+                    <TableRow key={report.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          to={`/reports/${report.id}`}
+                          className="underline-offset-4 hover:underline"
+                        >
+                          {report.patient_name}
+                        </Link>
+                        {/* On a phone the lab report sits under the patient, so
                         the status stays on screen. */}
-                      <span className="block font-normal text-muted-foreground sm:hidden">
-                        {report.name}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{report.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={status.variant}>{status.label}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {formatDateTime(report.imported_at)}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                        <span className="block font-normal text-muted-foreground sm:hidden">
+                          {report.name}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{report.name}</TableCell>
+                      <TableCell>
+                        <Status tone={status.variant}>{status.label}</Status>
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {formatDateTime(report.imported_at)}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </>
       )}
     </>
