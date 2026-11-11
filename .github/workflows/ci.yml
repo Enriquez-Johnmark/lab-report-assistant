@@ -138,11 +138,12 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
           pnpm exec playwright install --with-deps chromium
-      - name: Start with one clinic, its administrator and a physician
+      - name: Start with two clinics, the first with its administrator and a physician
         run: |
           ./target/debug/lab-report-assistant migrate
           clinic=$(./target/debug/lab-report-assistant clinic add --name "Example Women's Health" --email admin@example.test)
           ./target/debug/lab-report-assistant clinic add-physician --clinic "$clinic" --email dr.example@example.test --name "Dr. Example"
+          ./target/debug/lab-report-assistant clinic add --name "Example Family Clinic" --email admin@family.example.test
           nohup ./target/debug/lab-report-assistant serve > server.log 2>&1 &
           for _ in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health && break; sleep 1; done
       - name: Browser tests

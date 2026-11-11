@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Makes the screenshots and the walkthrough in docs/showcase/ on a fresh
-# database: one made-up clinic, its administrator and a physician, with the
-# demo reports drafted from Claude's recorded answers (no key, no cost).
+# database: two made-up clinics, each with its administrator and a physician,
+# the demo reports drafted from Claude's recorded answers (no key, no cost).
 # Needs Postgres and Mailpit (docker compose up -d) and a built web app.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -17,6 +17,9 @@ psql_admin "create database $db"
 $bin migrate >/dev/null
 clinic=$($bin clinic add --name "Example Women's Health" --email admin@example.test)
 $bin clinic add-physician --clinic "$clinic" --email dr.example@example.test --name "Dr. Example" >/dev/null
+# A second made-up clinic, side by side (M9): its own staff, reports and FHIR server.
+family=$($bin clinic add --name "Example Family Clinic" --email admin@family.example.test)
+$bin clinic add-physician --clinic "$family" --email dr.family@family.example.test --name "Dr. Family" >/dev/null
 curl -s -X DELETE http://127.0.0.1:8025/api/v1/messages >/dev/null
 
 BIND_ADDR=127.0.0.1:3002 WEB_DIR=web/dist $bin serve --recorded >target/showcase-server.log 2>&1 &
