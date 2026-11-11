@@ -14,7 +14,7 @@ A lab's printed report sheet, read under clinic light: calm, ruled and exact. It
 
 - **One accent:** a deep clinical teal, spent only on the primary action and the current place (the navigation's underline, the dot of "Ready to review"). Never on every row.
 - **One grey family:** warm greys, for the paper ground, the ink, rules and quiet text. Light only; there is no dark theme.
-- **Meaning colours:** amber for a value outside the lab's range and red for a blocked draft. Both always come with words, never colour alone.
+- **Meaning colours:** amber only for a value outside the lab's range; red for what failed (a blocked draft, a notice not sent); green for a notice sent or opened. Each always comes with words, never colour alone.
 - **Type:** IBM Plex Sans (OFL, bundled from `@fontsource-variable/ibm-plex-sans`). Table headings are small, spaced capitals, as on a lab report. Every value uses tabular figures.
 - **One corner rule:** controls 6px, panels 8px, status pills fully round. The larger radius steps collapse onto the panel radius.
 - **Hierarchy by space and rules, not boxes:**

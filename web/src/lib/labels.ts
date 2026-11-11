@@ -8,7 +8,8 @@ const statuses: Record<
   waiting: { label: "Ready to review", variant: "default" },
   blocked: { label: "Blocked by a check", variant: "destructive" },
   drafting: { label: "Drafting", variant: "secondary" },
-  approved: { label: "Approved; no email to send to", variant: "warning" },
+  // Amber is kept for values outside the range: words carry this one.
+  approved: { label: "Approved; no email to send to", variant: "secondary" },
   queued: { label: "Approved; sending", variant: "secondary" },
   sent: { label: "Sent", variant: "success" },
   opened: { label: "Opened by the patient", variant: "success" },
