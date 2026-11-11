@@ -19,6 +19,7 @@ hex = "0.4.3"
 # The engine: draft, approve, send exactly once, track. Pinned to the commit
 # tagged v0.4.5.
 nudgewright = { version = "0.4.5", git = "https://github.com/Enriquez-Johnmark/nudgewright", rev = "2855aa69ecde4b3ffc23ba869c2b4de5e8cd9846" }
+printpdf = { version = "0.7.0", default-features = false }
 quick-xml = "0.42.0"
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
 secrecy = "0.10.3"

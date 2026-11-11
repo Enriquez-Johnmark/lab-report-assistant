@@ -15,28 +15,42 @@ use axum::Router;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use serde_json::json;
-use time::macros::format_description;
 
 use super::AppState;
 use crate::delivery::LINK_DAYS;
-use crate::drafting::{Explanation, table};
-use crate::drafts::content_hash;
-use crate::fhir::Flag;
 use crate::html::escape;
 use crate::lab_reports::{ClinicId, LabReportId};
+use crate::letter::{Approved, Letter, approved_letter};
 
 pub(super) fn routes() -> Router<AppState> {
-    Router::new().route("/r/{token}", get(gate).post(page))
+    Router::new()
+        .route("/r/{token}", get(gate).post(page))
+        .route("/r/{token}/pdf", post(pdf))
+}
+
+/// What the link was asked for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum View {
+    /// Fetched: only the button, so scanners never see the report.
+    Gate,
+    /// "Show my report": the report, logged as opened.
+    Page,
+    /// "Download as PDF": the report as a PDF, logged (K1, K4).
+    Pdf,
 }
 
 async fn gate(State(state): State<AppState>, Path(token): Path<String>) -> Response {
-    respond(open(&state, &token, false).await)
+    respond(open(&state, &token, View::Gate).await)
 }
 
 async fn page(State(state): State<AppState>, Path(token): Path<String>) -> Response {
-    respond(open(&state, &token, true).await)
+    respond(open(&state, &token, View::Page).await)
+}
+
+async fn pdf(State(state): State<AppState>, Path(token): Path<String>) -> Response {
+    respond(open(&state, &token, View::Pdf).await)
 }
 
 fn respond(opened: Result<Response, sqlx::Error>) -> Response {
@@ -53,9 +67,9 @@ fn respond(opened: Result<Response, sqlx::Error>) -> Response {
     }
 }
 
-/// The page for `token`: refusals as they apply, then either the button
-/// (`show` false) or the report itself, logged as opened.
-async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sqlx::Error> {
+/// The page for `token`: refusals as they apply, then the button, the
+/// report itself or its PDF, the last two logged.
+async fn open(state: &AppState, token: &str, view: View) -> Result<Response, sqlx::Error> {
     let not_found = || {
         message(
             StatusCode::NOT_FOUND,
@@ -88,35 +102,30 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
             ),
         ));
     }
-    let approved = sqlx::query!(
-        r#"select d.explanations, d.source, a.content_hash, a.approved_at, p.name as "physician?",
-                  d.attempt = (select max(attempt) from drafts where tenant_id = $1 and lab_report_id = $2) as "latest!"
-           from approvals a
-           join drafts d on d.tenant_id = a.tenant_id and d.id = a.draft_id
-           left join physicians p on p.tenant_id = a.tenant_id and p.member_id = a.approved_by
-           where a.tenant_id = $1 and a.draft_id = $3"#,
-        clinic.as_uuid(),
-        report.as_uuid(),
-        found.draft_id,
+    let letter = match approved_letter(
+        &state.pool,
+        &state.reports,
+        clinic,
+        &found.clinic_name,
+        report,
+        Some(found.draft_id),
     )
-    .fetch_optional(&state.pool)
-    .await?;
-    let Some(approved) = approved else {
-        return Ok(not_found());
+    .await?
+    {
+        Approved::Current(letter) => letter,
+        Approved::No => return Ok(not_found()),
+        Approved::Changed => {
+            return Ok(message(
+                StatusCode::GONE,
+                "This report has been updated",
+                &format!(
+                    "Your physician changed it after this link was sent. {} will send you the new one.",
+                    escape(&found.clinic_name)
+                ),
+            ));
+        }
     };
-    let explanations: Vec<Explanation> =
-        serde_json::from_value(approved.explanations).map_err(|err| sqlx::Error::Decode(err.into()))?;
-    if !approved.latest || content_hash(&explanations) != approved.content_hash {
-        return Ok(message(
-            StatusCode::GONE,
-            "This report has been updated",
-            &format!(
-                "Your physician changed it after this link was sent. {} will send you the new one.",
-                escape(&found.clinic_name)
-            ),
-        ));
-    }
-    if !show {
+    if view == View::Gate {
         let body = format!(
             "<p class=\"demo\">Made-up demo: not a real patient</p>\n{}\n<h1>Your lab report is ready</h1>\n\
              <p>Your physician has reviewed it. Open it to read your results and what each one means.</p>\n\
@@ -125,74 +134,93 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
         );
         return Ok((StatusCode::OK, document("Your lab report", &body)).into_response());
     }
-    let lab_report = state
-        .reports
-        .get(clinic, report)
-        .await
-        .map_err(|err| sqlx::Error::Decode(err.into()))?;
+    let action = if view == View::Pdf {
+        "lab_report.pdf_downloaded"
+    } else {
+        "lab_report.opened"
+    };
     crate::audit::record(
         &state.pool,
         clinic,
         state.clock.now(),
         "patient",
-        "lab_report.opened",
+        action,
         report,
         json!({ "delivery_id": delivery }),
     )
     .await?;
+    if view == View::Pdf {
+        return Ok(pdf_response(&letter));
+    }
+    Ok((
+        StatusCode::OK,
+        document("Your lab report", &letter_page(&letter, token)),
+    )
+        .into_response())
+}
 
-    let day = approved
-        .approved_at
-        .format(format_description!("[month repr:long] [day padding:none], [year]"))
-        .unwrap_or_default();
-    // A physician who has since left the clinic is no longer named.
-    let physician = escape(approved.physician.as_deref().unwrap_or("your physician"));
-    let made = match approved.source.as_str() {
-        "model" => format!("Drafted with AI, reviewed and approved by {} on {day}.", physician),
-        "template" => format!(
-            "Drafted from a fixed template, reviewed and approved by {} on {day}.",
-            physician
-        ),
-        _ => format!("Written and approved by {} on {day}.", physician),
-    };
+/// The letter as a page, with the button that downloads it as a PDF.
+fn letter_page(letter: &Letter, token: &str) -> String {
     let mut rows = String::new();
-    for (position, row) in table(&lab_report.results).into_iter().enumerate() {
-        let id = crate::drafting::result_id(position);
-        let text = explanations
-            .iter()
-            .find(|e| e.result == id)
-            .map(|e| e.text.as_str())
-            .unwrap_or("");
+    for row in &letter.rows {
         // Outside the range is said in words and set apart in style, never by colour alone.
-        let (flag, class, value_class) = match row.flag {
-            Flag::Low => ("Below the lab's range", "flag out", "num out"),
-            Flag::Normal => ("Within the lab's range", "flag", "num"),
-            Flag::High => ("Above the lab's range", "flag out", "num out"),
+        let (class, value_class) = if row.outside {
+            ("flag out", "num out")
+        } else {
+            ("flag", "num")
         };
         rows.push_str(&format!(
-            "<tr><th scope=\"row\">{}</th><td class=\"{value_class}\" data-label=\"Your value\">{} {}</td>\
-             <td data-label=\"The lab's range\"><span class=\"num\">{}</span> <span class=\"{class}\">{flag}</span></td>\
+            "<tr><th scope=\"row\">{}</th><td class=\"{value_class}\" data-label=\"Your value\">{}</td>\
+             <td data-label=\"The lab's range\"><span class=\"num\">{}</span> <span class=\"{class}\">{}</span></td>\
              <td data-label=\"What it means\">{}</td></tr>\n",
             escape(&row.test),
             escape(&row.value),
-            escape(&row.unit),
             escape(&row.range),
-            escape(text),
+            row.flag,
+            escape(&row.explanation),
         ));
     }
-    let body = format!(
+    format!(
         "<p class=\"demo\">Made-up demo: not a real patient</p>\n{}\n\
-         <h1>Your lab report</h1>\n<p class=\"who\">{} · {} · {}</p>\n<p class=\"made\">{made}</p>\n\
+         <h1>Your lab report</h1>\n<p class=\"who\">{} · {} · {}</p>\n<p class=\"made\">{}</p>\n\
          <table><thead><tr><th>Test</th><th>Your value</th><th>The lab's range</th><th>What it means</th></tr></thead>\n\
          <tbody>\n{rows}</tbody></table>\n\
+         <form method=\"post\" action=\"/r/{}/pdf\"><button type=\"submit\" class=\"secondary\">Download as PDF</button></form>\n\
          <p class=\"close\">Questions? Contact {}. This page explains your results; it doesn't diagnose anything.</p>",
-        letterhead(&found.clinic_name),
-        escape(&lab_report.patient_name),
-        escape(&lab_report.name),
-        escape(&found.clinic_name),
-        escape(&found.clinic_name),
-    );
-    Ok((StatusCode::OK, document("Your lab report", &body)).into_response())
+        letterhead(&letter.clinic),
+        escape(&letter.patient),
+        escape(&letter.report),
+        escape(&letter.clinic),
+        escape(&letter.made),
+        escape(token),
+        escape(&letter.clinic),
+    )
+}
+
+/// The letter as a PDF download, never cached: it holds health information.
+pub(super) fn pdf_response(letter: &Letter) -> Response {
+    match crate::pdf::render(letter) {
+        Ok(bytes) => (
+            [
+                (axum::http::header::CONTENT_TYPE, "application/pdf"),
+                (
+                    axum::http::header::CONTENT_DISPOSITION,
+                    "attachment; filename=\"lab-report.pdf\"",
+                ),
+                (axum::http::header::CACHE_CONTROL, "no-store"),
+            ],
+            bytes,
+        )
+            .into_response(),
+        Err(err) => {
+            tracing::error!(%err, "making the PDF failed");
+            message(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Something went wrong",
+                "Please try again in a moment.",
+            )
+        }
+    }
 }
 
 /// The clinic's name across the top, as on its own paper.
@@ -238,7 +266,8 @@ const STYLE: &str = "@font-face{font-family:'IBM Plex Sans';font-weight:100 700;
      th,td{display:block;border:0;padding:.15rem 0}tbody th{font-size:1.0625rem}\
      td[data-label]::before{content:attr(data-label);display:block;font-size:.75rem;color:#6b655c;letter-spacing:.04em;text-transform:uppercase}}\
      button{font:inherit;font-weight:600;padding:.65rem 1.25rem;border-radius:6px;border:0;background:#0f5a5c;color:#fff;cursor:pointer;margin-top:.5rem}\
-     button:hover{background:#0c4a4c}button:focus-visible{outline:3px solid #7fb9bb;outline-offset:2px}";
+     button:hover{background:#0c4a4c}\
+     button.secondary{background:#fff;color:#0f5a5c;border:1px solid #0f5a5c;margin:0 0 1rem}button.secondary:hover{background:#eef5f5}button:focus-visible{outline:3px solid #7fb9bb;outline-offset:2px}";
 
 /// A whole page, never cached: it holds health information.
 fn document(title: &str, body: &str) -> impl IntoResponse {

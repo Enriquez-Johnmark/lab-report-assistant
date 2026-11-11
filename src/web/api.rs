@@ -28,6 +28,7 @@ use crate::engine::outbox::NoExtraChecks;
 use crate::fhir::Flag;
 use crate::fhir_server::{FetchError, FetchOutcome, FhirServers};
 use crate::lab_reports::{ImportError, LabReportId};
+use crate::letter::{Approved, approved_letter};
 use crate::review::{AuditEntry, MAX_MODEL_DRAFTS, ReviewError};
 
 pub(super) fn routes() -> Router<AppState> {
@@ -40,6 +41,7 @@ pub(super) fn routes() -> Router<AppState> {
         .route("/api/lab-reports/{id}", get(detail))
         .route("/api/lab-reports/{id}/timeline", get(timeline))
         .route("/api/lab-reports/{id}/fhir", get(fhir_source))
+        .route("/api/lab-reports/{id}/pdf", get(report_pdf))
         .route("/api/lab-reports/{id}/approve", post(approve))
         .route("/api/lab-reports/{id}/edit", post(edit))
         .route("/api/lab-reports/{id}/write", post(write))
@@ -559,6 +561,54 @@ async fn fhir_source(
         other => ApiError::internal(other),
     })?;
     Ok(Json(FhirSource { source }))
+}
+
+/// K1: the approved report as a PDF, for the clinic's staff (the Sent
+/// list); only while the approved text still stands (K3), and logged (K4).
+async fn report_pdf(
+    State(state): State<AppState>,
+    ApiMember(member): ApiMember,
+    ReportPath(id): ReportPath,
+) -> Result<Response, ApiError> {
+    // Another clinic's report is not found, as everywhere (A4).
+    state.reports.source(member.tenant, id).await.map_err(|err| match err {
+        ImportError::NotFound => ApiError::NotFound,
+        other => ApiError::internal(other),
+    })?;
+    let clinic = Accounts::new(state.pool.clone(), state.clock.clone())
+        .get(member.tenant)
+        .await
+        .map_err(ApiError::internal)?;
+    let letter = match approved_letter(&state.pool, &state.reports, member.tenant, &clinic.name, id, None)
+        .await
+        .map_err(ApiError::internal)?
+    {
+        Approved::Current(letter) => letter,
+        Approved::No => {
+            return Err(ApiError::Refused(
+                StatusCode::CONFLICT,
+                "This report isn't approved yet, so there's no PDF.".into(),
+            ));
+        }
+        Approved::Changed => {
+            return Err(ApiError::Refused(
+                StatusCode::CONFLICT,
+                "The approved text has changed since: approve the new text to download it.".into(),
+            ));
+        }
+    };
+    crate::audit::record(
+        &state.pool,
+        member.tenant,
+        state.clock.now(),
+        &member.email,
+        "lab_report.pdf_downloaded",
+        id,
+        serde_json::json!({}),
+    )
+    .await
+    .map_err(ApiError::internal)?;
+    Ok(super::patient::pdf_response(&letter))
 }
 
 /// Approving the text the physician read.

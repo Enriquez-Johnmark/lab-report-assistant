@@ -14,8 +14,10 @@ pub mod fhir;
 pub mod fhir_server;
 pub mod html;
 pub mod lab_reports;
+pub mod letter;
 pub mod made_up;
 pub mod model;
+pub mod pdf;
 pub mod review;
 pub mod web;
 
