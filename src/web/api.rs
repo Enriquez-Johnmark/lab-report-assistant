@@ -314,6 +314,8 @@ pub struct LabReportRow {
     pub status: &'static str,
     /// When it was imported.
     pub imported_at: String,
+    /// When its current text was approved; none before approval.
+    pub approved_at: Option<String>,
 }
 
 async fn list(
@@ -328,7 +330,8 @@ async fn list(
             .latest(clinic, report.id)
             .await
             .map_err(ApiError::internal)?;
-        let approved = state.reviews.current_approval(clinic, report.id).await?.is_some();
+        let approval = state.reviews.current_approval(clinic, report.id).await?;
+        let approved = approval.is_some();
         let delivered = if approved {
             crate::delivery::delivery_state(&state.pool, clinic, report.id)
                 .await
@@ -349,6 +352,7 @@ async fn list(
             patient_name: report.patient_name,
             status,
             imported_at: time_text(report.imported_at),
+            approved_at: approval.map(|approval| time_text(approval.approved_at)),
         });
     }
     // Passed drafts first, then blocked ones, then the rest (Round 2).

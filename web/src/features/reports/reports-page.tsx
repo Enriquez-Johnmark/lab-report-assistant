@@ -176,7 +176,9 @@ export function ReportsPage() {
                   <TableHead>Patient</TableHead>
                   <TableHead className="hidden sm:table-cell">Lab report</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Imported</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {isSentView ? "Approved" : "Imported"}
+                  </TableHead>
                   {isSentView ? <TableHead className="text-right">Report</TableHead> : null}
                 </TableRow>
               </TableHeader>
@@ -204,7 +206,11 @@ export function ReportsPage() {
                         <Status tone={status.variant}>{status.label}</Status>
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {formatDateTime(report.imported_at)}
+                        {formatDateTime(
+                          isSentView
+                            ? (report.approved_at ?? report.imported_at)
+                            : report.imported_at
+                        )}
                       </TableCell>
                       {isSentView ? (
                         <TableCell className="text-right">

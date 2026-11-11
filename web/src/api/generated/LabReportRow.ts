@@ -25,4 +25,8 @@ status: string,
 /**
  * When it was imported.
  */
-imported_at: string, };
+imported_at: string, 
+/**
+ * When its current text was approved; none before approval.
+ */
+approved_at: string | null, };

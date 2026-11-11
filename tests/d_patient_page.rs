@@ -299,3 +299,31 @@ async fn d6_a_report_stays_readable_after_its_physician_leaves_the_clinic(pool: 
     assert_eq!(status, 200);
     assert!(page.contains("reviewed and approved by your physician on"), "{page}");
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn d5_the_sent_list_shows_when_each_report_was_approved_not_imported(pool: PgPool) {
+    let s = setup(pool).await;
+    s.clock.advance(time::Duration::days(2));
+    let (report, _) = s.approve(0).await;
+
+    let listed = call(&s.app, "GET", "/api/lab-reports", None, Some(&s.doctor)).await;
+
+    let row = listed
+        .body
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["id"] == report["id"])
+        .unwrap()
+        .clone();
+    assert_eq!(row["approved_at"], "2026-11-12T09:00:00Z", "{row}");
+    assert_ne!(row["approved_at"], row["imported_at"]);
+    let waiting = listed
+        .body
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["status"] == "waiting")
+        .unwrap();
+    assert!(waiting["approved_at"].is_null(), "{waiting}");
+}
