@@ -55,6 +55,8 @@ const actions: Record<string, string> = {
   "lab_report.notice_queued": "Notice queued for the patient",
   "lab_report.not_delivered": "Not delivered: no email address",
   "lab_report.opened": "Opened by the patient",
+  "fhir.fetched": "Fetched from the FHIR server",
+  "fhir.fetch_failed": "Fetch from the FHIR server failed",
 }
 
 export function actionLabel(action: string) {

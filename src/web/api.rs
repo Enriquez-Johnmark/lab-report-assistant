@@ -509,8 +509,8 @@ pub struct AuditView {
     pub actor: String,
     /// What, e.g. `lab_report.approved`.
     pub action: String,
-    /// The lab report it concerns.
-    pub lab_report: String,
+    /// The lab report it concerns; none for a fetch from the FHIR server.
+    pub lab_report: Option<String>,
     /// Extra facts, e.g. the failed check.
     #[cfg_attr(test, ts(type = "Record<string, unknown>"))]
     pub details: serde_json::Value,
@@ -522,7 +522,7 @@ impl From<AuditEntry> for AuditView {
             at: time_text(entry.at),
             actor: entry.actor,
             action: entry.action,
-            lab_report: entry.lab_report.to_string(),
+            lab_report: entry.lab_report.map(|id| id.to_string()),
             details: entry.details,
         }
     }

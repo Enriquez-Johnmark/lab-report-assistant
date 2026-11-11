@@ -73,3 +73,31 @@ async fn i1_only_the_administrator_can_fetch_and_a_clinic_with_no_server_is_told
         no_server.body
     );
 }
+
+#[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+async fn i5_the_activity_log_shows_each_fetch(pool: PgPool) {
+    let clock = clock();
+    let clinic = clinic(&pool, clock.clone()).await;
+    let server = fhir_server().await;
+    let address = ServerAddress::parse(&format!("{}/fhir", server.uri())).unwrap();
+    FhirServers::new(pool.clone(), clock.clone())
+        .set(clinic, &address, "operator")
+        .await
+        .unwrap();
+    let app = app(&pool, clock);
+    let admin = log_in(&app, &pool, "admin@example.test").await;
+    call(&app, "POST", "/api/fhir-server/fetch", Some(json!({})), Some(&admin)).await;
+
+    let log = call(&app, "GET", "/api/activity", None, Some(&admin)).await;
+
+    let fetched = log
+        .body
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["action"] == "fhir.fetched");
+    let fetched = fetched.unwrap_or_else(|| panic!("no fetch in {:?}", log.body));
+    assert_eq!(fetched["actor"], "admin@example.test");
+    assert!(fetched["lab_report"].is_null(), "a fetch concerns no single report");
+    assert_eq!(fetched["details"]["imported"], 1);
+}

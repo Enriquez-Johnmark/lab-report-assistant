@@ -17,9 +17,9 @@ actor: string,
  */
 action: string, 
 /**
- * The lab report it concerns.
+ * The lab report it concerns; none for a fetch from the FHIR server.
  */
-lab_report: string, 
+lab_report: string | null, 
 /**
  * Extra facts, e.g. the failed check.
  */

@@ -114,13 +114,17 @@ export function ActivityPage() {
                   </TableCell>
                   <TableCell>{actionLabel(entry.action)}</TableCell>
                   <TableCell>{entry.actor}</TableCell>
-                  <TableCell>
-                    <Link
-                      to={`/reports/${entry.lab_report}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {reportName(entry.lab_report)}
-                    </Link>
+                  <TableCell className="whitespace-normal">
+                    {entry.lab_report ? (
+                      <Link
+                        to={`/reports/${entry.lab_report}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {reportName(entry.lab_report)}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">{fetchSummary(entry.details)}</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -130,4 +134,12 @@ export function ActivityPage() {
       )}
     </>
   )
+}
+
+/** What a fetch from the FHIR server did, from its audit entry (I5). */
+function fetchSummary(details: Record<string, unknown>) {
+  if (typeof details.reason === "string") return details.reason
+  const count = (key: string) => (typeof details[key] === "number" ? details[key] : 0)
+  const refused = Array.isArray(details.refused) ? details.refused.length : 0
+  return `${count("imported")} imported, ${count("skipped")} already here, ${refused} refused`
 }

@@ -100,8 +100,8 @@ pub struct AuditEntry {
     pub actor: String,
     /// What, e.g. `lab_report.approved`.
     pub action: String,
-    /// The lab report it concerns.
-    pub lab_report: uuid::Uuid,
+    /// The lab report it concerns; none for a fetch from the FHIR server.
+    pub lab_report: Option<uuid::Uuid>,
     /// Extra facts.
     pub details: serde_json::Value,
 }
@@ -529,13 +529,14 @@ impl Reviews {
                 at: r.at,
                 actor: r.actor,
                 action: r.action,
-                lab_report: r.subject_id,
+                lab_report: Some(r.subject_id),
                 details: r.details,
             })
             .collect())
     }
 
-    /// The clinic's latest audit entries about lab reports, newest first,
+    /// The clinic's latest audit entries about lab reports and fetches from
+    /// its FHIR server (I5), newest first,
     /// optionally only one person's or one action (E3).
     pub async fn clinic_log(
         &self,
@@ -544,8 +545,8 @@ impl Reviews {
         action: Option<&str>,
     ) -> Result<Vec<AuditEntry>, ReviewError> {
         let rows = sqlx::query!(
-            "select at, actor, action, subject_id, details from audit_events
-             where tenant_id = $1 and subject_type = 'lab_report'
+            "select at, actor, action, subject_type, subject_id, details from audit_events
+             where tenant_id = $1 and subject_type in ('lab_report', 'fhir_server')
                and ($2::text is null or actor = $2) and ($3::text is null or action = $3)
              order by at desc, id desc limit 500",
             clinic.as_uuid(),
@@ -560,7 +561,7 @@ impl Reviews {
                 at: r.at,
                 actor: r.actor,
                 action: r.action,
-                lab_report: r.subject_id,
+                lab_report: (r.subject_type == "lab_report").then_some(r.subject_id),
                 details: r.details,
             })
             .collect())
