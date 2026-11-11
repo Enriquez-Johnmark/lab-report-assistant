@@ -9,6 +9,8 @@ import type { Locator, Page } from "@playwright/test"
 
 export const ADMIN = "admin@example.test"
 export const PHYSICIAN = "dr.example@example.test"
+/** The second made-up clinic's administrator (M9). */
+export const FAMILY_ADMIN = "admin@family.example.test"
 /** Where the screenshots and the video go. */
 export const OUT = resolve(import.meta.dirname, "../../docs/showcase")
 
@@ -76,6 +78,18 @@ export async function addOverlay(page: Page) {
     if (document.body) install()
     else document.addEventListener("DOMContentLoaded", install)
   })
+}
+
+/** The PDF's first page as a PNG, drawn by pdftoppm at `dpi`. */
+export function pdfPicture(pdf: string, png: string, dpi = 150) {
+  execFileSync("pdftoppm", [
+    "-png",
+    "-r",
+    String(dpi),
+    "-singlefile",
+    pdf,
+    png.replace(/\.png$/, ""),
+  ])
 }
 
 /** Shows `text` as the caption and gives viewers time to read it. */

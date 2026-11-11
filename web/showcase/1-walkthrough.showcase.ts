@@ -1,13 +1,28 @@
+import { writeFileSync } from "node:fs"
+import { pathToFileURL } from "node:url"
+
 import { expect, test } from "@playwright/test"
 
 import { linkIn, logIn } from "../e2e/support.ts"
-import { addOverlay, ADMIN, OUT, PHYSICIAN, pointAt, press, record, say } from "./support.ts"
+import {
+  addOverlay,
+  ADMIN,
+  FAMILY_ADMIN,
+  OUT,
+  pdfPicture,
+  PHYSICIAN,
+  pointAt,
+  press,
+  record,
+  say,
+} from "./support.ts"
 
 const size = { width: 1280, height: 720 }
 
-/** About two and a half minutes from an empty clinic to a patient reading
- *  their report, with captions; saved as docs/showcase/walkthrough.mp4. Runs
- *  first, on a fresh clinic; the screenshots follow on the same data. */
+/** About three minutes from an empty clinic to a patient reading their
+ *  report and its PDF, with captions; saved as docs/showcase/walkthrough.mp4.
+ *  Runs first, on a fresh clinic whose FHIR server holds the made-up
+ *  reports; the screenshots follow on the same data. */
 test("walkthrough", async ({ browser }, testInfo) => {
   const context = await browser.newContext({ viewport: size })
   const page = await context.newPage()
@@ -21,13 +36,14 @@ test("walkthrough", async ({ browser }, testInfo) => {
   await say(page, "Lab Report Assistant, at a made-up women's health clinic with made-up patients.")
   await say(
     page,
-    "Lab results arrive as FHIR files, the healthcare data standard: here 30 made-up reports from a made-up lab."
+    "Lab results live on a FHIR server, the healthcare data standard. This clinic's holds 30 made-up reports from a made-up lab."
   )
-  await press(page, page.getByRole("button", { name: "Load the demo data" }).first())
+  await press(page, page.getByRole("button", { name: "Fetch new lab reports" }))
   await expect(page.getByRole("row")).toHaveCount(31)
+  await pointAt(page, page.getByRole("status").filter({ hasText: "imported" }))
   await say(
     page,
-    "Each file is checked strictly on import; a broken one is refused with the reason."
+    "Each report is checked strictly; a broken one is skipped with the reason. Fetching again adds nothing, and every fetch is logged."
   )
   await say(page, "Claude drafts a plain-language explanation of each, in the background.")
   await expect(page.getByText("Drafting")).toHaveCount(0, { timeout: 90_000 })
@@ -86,6 +102,27 @@ test("walkthrough", async ({ browser }, testInfo) => {
     page,
     "Every opening is logged. The email is sent once, even if the server crashes mid-send."
   )
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    press(page, page.getByRole("button", { name: "Download as PDF" })),
+  ])
+  const pdf = testInfo.outputPath("lab-report.pdf")
+  await download.saveAs(pdf)
+  const picture = testInfo.outputPath("lab-report.png")
+  pdfPicture(pdf, picture, 110)
+  const sheet = testInfo.outputPath("pdf.html")
+  writeFileSync(
+    sheet,
+    // The page's top, where the report is, large enough to read in the video.
+    `<body style="margin:0;background:#e9e6e1;display:flex;justify-content:center;padding:22px">` +
+      `<div style="height:676px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.2)">` +
+      `<img src="lab-report.png" style="width:940px;margin-top:-62px"></div></body>`
+  )
+  await page.goto(pathToFileURL(sheet).href)
+  await say(
+    page,
+    "The patient can keep it as a PDF: the same approved text, made on request and never stored. Each download is logged."
+  )
 
   // A blocked draft, fixed by the physician.
   await page.goto("/")
@@ -108,13 +145,28 @@ test("walkthrough", async ({ browser }, testInfo) => {
     page,
     "The Sent page shows each report that went out, and whether the patient opened it."
   )
+  await pointAt(page, page.getByRole("button", { name: /PDF/ }).first())
   await say(
     page,
-    "Every import, draft, check, edit, approval, notice and opening is in an append-only audit log."
+    "The physician can download the PDF too, only while the approved text still stands.",
+    4500
+  )
+
+  // A second clinic on the same server.
+  await context.clearCookies()
+  await logIn(page, FAMILY_ADMIN)
+  await page.getByText("No lab reports yet").waitFor()
+  await say(
+    page,
+    "A second made-up clinic runs on the same server: it sees none of the first clinic's reports, patients or activity."
   )
   await say(
     page,
-    "Made with Claude Code: 38 acceptance criteria, each proven by a test named after it.",
+    "Every fetch, draft, check, edit, approval, notice, opening and download is in an append-only audit log."
+  )
+  await say(
+    page,
+    "Made with Claude Code: 49 acceptance criteria, each proven by a test named after it.",
     5000
   )
   await stop(`${OUT}/walkthrough.mp4`)

@@ -2,7 +2,8 @@
 # Makes the screenshots and the walkthrough in docs/showcase/ on a fresh
 # database: two made-up clinics, each with its administrator and a physician,
 # the demo reports drafted from Claude's recorded answers (no key, no cost).
-# Needs Postgres and Mailpit (docker compose up -d) and a built web app.
+# Needs Postgres and Mailpit (docker compose up -d), a built web app, and
+# pdftoppm (poppler-utils) for the PDF's picture; it starts HAPI FHIR itself.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,6 +21,13 @@ $bin clinic add-physician --clinic "$clinic" --email dr.example@example.test --n
 # A second made-up clinic, side by side (M9): its own staff, reports and FHIR server.
 family=$($bin clinic add --name "Example Family Clinic" --email admin@family.example.test)
 $bin clinic add-physician --clinic "$family" --email dr.family@family.example.test --name "Dr. Family" >/dev/null
+# The first clinic's FHIR server (M8): HAPI FHIR on this computer, holding the
+# 30 made-up reports. Loading them again changes nothing.
+fhir=http://127.0.0.1:8090/fhir
+curl -sf "$fhir/metadata" >/dev/null || docker compose --profile fhir up -d hapi
+for _ in $(seq 1 90); do curl -sf "$fhir/metadata" >/dev/null && break; sleep 2; done
+$bin load-made-up --url "$fhir" >/dev/null
+$bin clinic set-fhir-server --clinic "$clinic" --url "$fhir" >/dev/null
 curl -s -X DELETE http://127.0.0.1:8025/api/v1/messages >/dev/null
 
 BIND_ADDR=127.0.0.1:3002 WEB_DIR=web/dist $bin serve --recorded >target/showcase-server.log 2>&1 &
