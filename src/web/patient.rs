@@ -118,10 +118,10 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
     }
     if !show {
         let body = format!(
-            "<p class=\"demo\">Made-up demo: not a real patient</p>\n<h1>Your lab report from {}</h1>\n\
-             <p>Your report is ready, reviewed by your physician.</p>\n\
+            "<p class=\"demo\">Made-up demo: not a real patient</p>\n{}\n<h1>Your lab report is ready</h1>\n\
+             <p>Your physician has reviewed it. Open it to read your results and what each one means.</p>\n\
              <form method=\"post\"><button type=\"submit\">Show my report</button></form>",
-            escape(&found.clinic_name)
+            letterhead(&found.clinic_name)
         );
         return Ok((StatusCode::OK, document("Your lab report", &body)).into_response());
     }
@@ -181,17 +181,26 @@ async fn open(state: &AppState, token: &str, show: bool) -> Result<Response, sql
         ));
     }
     let body = format!(
-        "<p class=\"demo\">Made-up demo: not a real patient</p>\n\
-         <h1>Your lab report</h1>\n<p>{} · {} · {}</p>\n<p class=\"made\">{made}</p>\n\
+        "<p class=\"demo\">Made-up demo: not a real patient</p>\n{}\n\
+         <h1>Your lab report</h1>\n<p class=\"who\">{} · {} · {}</p>\n<p class=\"made\">{made}</p>\n\
          <table><thead><tr><th>Test</th><th>Your value</th><th>The lab's range</th><th>What it means</th></tr></thead>\n\
          <tbody>\n{rows}</tbody></table>\n\
-         <p>Questions? Contact {}. This page explains your results; it doesn't diagnose anything.</p>",
+         <p class=\"close\">Questions? Contact {}. This page explains your results; it doesn't diagnose anything.</p>",
+        letterhead(&found.clinic_name),
         escape(&lab_report.patient_name),
         escape(&lab_report.name),
         escape(&found.clinic_name),
         escape(&found.clinic_name),
     );
     Ok((StatusCode::OK, document("Your lab report", &body)).into_response())
+}
+
+/// The clinic's name across the top, as on its own paper.
+fn letterhead(clinic: &str) -> String {
+    format!(
+        "<header class=\"letterhead\"><strong>{}</strong><span>Lab results</span></header>",
+        escape(clinic)
+    )
 }
 
 fn message(status: StatusCode, title: &str, text: &str) -> Response {
@@ -202,20 +211,32 @@ fn message(status: StatusCode, title: &str, text: &str) -> Response {
         .into_response()
 }
 
-const STYLE: &str = "body{font:16px/1.55 system-ui,sans-serif;margin:0 auto;max-width:56rem;padding:1.5rem 1rem 3rem;color:#1a1a1a}\
-     h1{font-size:1.75rem;line-height:1.2;margin:1.5rem 0 .5rem}\
-     .demo{background:#fff4d6;border:1px solid #e8c86a;border-radius:.5rem;padding:.5rem .75rem;font-weight:600}\
-     .made{color:#4a4a4a}table{border-collapse:collapse;width:100%;margin:1.5rem 0}\
-     th,td{border-bottom:1px solid #ddd;padding:.75rem .5rem;text-align:left;vertical-align:top}\
-     thead th{font-size:.875rem;color:#4a4a4a;font-weight:600}\
+/// A short letter from the clinic on a sheet of paper, in the app's look
+/// (`docs/frontend.md`): warm greys, one clinical teal, amber only for a value
+/// outside the range, always with words.
+const STYLE: &str = "*{box-sizing:border-box}\
+     body{margin:0;padding:1.5rem 1rem 3rem;background:#f8f7f4;color:#26231f;\
+     font:16px/1.6 'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif}\
+     main{max-width:46rem;margin:0 auto;background:#fff;border:1px solid #e2ded6;border-radius:8px;padding:0 1.5rem 1.5rem;overflow:hidden}\
+     .demo{margin:0 -1.5rem;padding:.5rem 1.5rem;background:#fbf0d9;border-bottom:1px solid #ecd9a8;font-size:.875rem;font-weight:600}\
+     .letterhead{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap;\
+     margin:0 -1.5rem 1.5rem;padding:1rem 1.5rem;border-bottom:2px solid #0f5a5c}\
+     .letterhead strong{font-size:1.125rem}.letterhead span{color:#6b655c;font-size:.8125rem;letter-spacing:.06em;text-transform:uppercase}\
+     h1{font-size:1.625rem;line-height:1.25;margin:0 0 .5rem}.who{margin:0}.made{color:#6b655c;margin:.25rem 0 0}\
+     table{border-collapse:collapse;width:100%;margin:1.5rem 0}\
+     th,td{border-bottom:1px solid #ebe7e0;padding:.75rem .5rem;text-align:left;vertical-align:top}\
+     thead th{font-size:.75rem;color:#6b655c;font-weight:500;letter-spacing:.06em;text-transform:uppercase;border-bottom-color:#d9d4cb}\
+     tbody th{font-weight:600}\
      .num{font-variant-numeric:tabular-nums;white-space:nowrap}.out{font-weight:700}\
-     .flag{display:inline-block;margin-top:.25rem;padding:0 .5rem;border-radius:999px;background:#eef0f0;color:#333;font-size:.8125rem;white-space:nowrap}\
-     .flag.out{background:#fdecd2;color:#5c3700;font-weight:600}\
-     @media (max-width:40rem){thead{display:none}tr{display:block;padding:.75rem 0;border-bottom:1px solid #ddd}\
-     th,td{display:block;border:0;padding:.2rem 0}th{font-size:1.0625rem}\
-     td[data-label]::before{content:attr(data-label);display:block;font-size:.8125rem;color:#555;font-weight:400}}\
-     button{font:inherit;font-weight:600;padding:.6rem 1.2rem;border-radius:.5rem;border:0;background:#0f6e6e;color:#fff;cursor:pointer}\
-     button:focus-visible{outline:3px solid #7fc4c4;outline-offset:2px}";
+     .flag{display:inline-block;margin-top:.25rem;font-size:.8125rem;color:#6b655c;white-space:nowrap}\
+     .flag.out{padding:0 .5rem;border-radius:999px;background:#fbe8cc;color:#5c3700;font-weight:600}\
+     .close{color:#4a453e;font-size:.9375rem;margin:0}\
+     @media (max-width:40rem){main{padding:0 1rem 1rem}.demo,.letterhead{margin-left:-1rem;margin-right:-1rem;padding-left:1rem;padding-right:1rem}\
+     thead{display:none}tr{display:block;padding:.75rem 0;border-bottom:1px solid #ebe7e0}\
+     th,td{display:block;border:0;padding:.15rem 0}tbody th{font-size:1.0625rem}\
+     td[data-label]::before{content:attr(data-label);display:block;font-size:.75rem;color:#6b655c;letter-spacing:.04em;text-transform:uppercase}}\
+     button{font:inherit;font-weight:600;padding:.65rem 1.25rem;border-radius:6px;border:0;background:#0f5a5c;color:#fff;cursor:pointer;margin-top:.5rem}\
+     button:hover{background:#0c4a4c}button:focus-visible{outline:3px solid #7fb9bb;outline-offset:2px}";
 
 /// A whole page, never cached: it holds health information.
 fn document(title: &str, body: &str) -> impl IntoResponse {
@@ -223,7 +244,7 @@ fn document(title: &str, body: &str) -> impl IntoResponse {
         "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\
          <meta name=\"robots\" content=\"noindex\"><title>{}</title><style>{STYLE}</style></head>\
-         <body>\n{body}\n</body></html>\n",
+         <body>\n<main>\n{body}\n</main>\n</body></html>\n",
         escape(title)
     ));
     ([(axum::http::header::CACHE_CONTROL, "no-store")], html)
