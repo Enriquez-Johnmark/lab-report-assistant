@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{app, call, clock, log_in};
+use common::{Fake, app, call, clock, draft_now, log_in};
 use lab_report_assistant::demo_data;
 use lab_report_assistant::engine::accounts::Accounts;
 use lab_report_assistant::fhir_server::{FhirServers, ServerAddress};
@@ -43,10 +43,32 @@ async fn j1_each_clinics_staff_sees_only_its_own_reports_sent_list_and_activity(
     let files = demo_data::generate();
     let ours = reports.import(women, &files[0].json).await.unwrap();
     let theirs = reports.import(family, &files[1].json).await.unwrap();
+    draft_now(&pool, clock(), Fake(Ok)).await;
     let app = app(&pool, clock());
+    // Each clinic's physician approves their own report, so each Sent list
+    // holds one.
+    let (mut drafts, mut doctors) = (std::collections::HashMap::new(), std::collections::HashMap::new());
+    for (who, own) in [("women", ours), ("family", theirs)] {
+        let doctor = log_in(&app, &pool, &format!("dr@{who}.test")).await;
+        doctors.insert(who, doctor.clone());
+        let detail = call(&app, "GET", &format!("/api/lab-reports/{own}"), None, Some(&doctor))
+            .await
+            .body;
+        let draft = json!({ "draft_id": detail["draft"]["id"], "content_hash": detail["draft"]["content_hash"] });
+        drafts.insert(own, draft.clone());
+        let approved = call(
+            &app,
+            "POST",
+            &format!("/api/lab-reports/{own}/approve"),
+            Some(draft),
+            Some(&doctor),
+        )
+        .await;
+        assert_eq!(approved.status, 204, "{who}: {:?}", approved.body);
+    }
 
     for (who, own, other) in [("women", ours, theirs), ("family", theirs, ours)] {
-        let doctor = log_in(&app, &pool, &format!("dr@{who}.test")).await;
+        let doctor = doctors[who].clone();
         let admin = log_in(&app, &pool, &format!("admin@{who}.test")).await;
 
         let listed = call(&app, "GET", "/api/lab-reports", None, Some(&doctor)).await.body;
@@ -57,6 +79,8 @@ async fn j1_each_clinics_staff_sees_only_its_own_reports_sent_list_and_activity(
             .map(|r| r["id"].as_str().unwrap())
             .collect();
         assert_eq!(ids, [own.to_string()], "{who} lists only its own");
+        // That one is approved: the clinic's Sent list holds only its own.
+        assert_ne!(listed[0]["status"], "waiting", "{who}'s own report is in its Sent list");
         for path in [
             format!("/api/lab-reports/{other}"),
             format!("/api/lab-reports/{other}/timeline"),
@@ -65,7 +89,8 @@ async fn j1_each_clinics_staff_sees_only_its_own_reports_sent_list_and_activity(
             let answer = call(&app, "GET", &path, None, Some(&doctor)).await;
             assert_eq!(answer.status, 404, "{who}: {path}");
         }
-        let approve = json!({ "draft_id": uuid::Uuid::now_v7(), "content_hash": "x" });
+        // The other clinic's real draft and hash: still not found.
+        let approve = drafts[&other].clone();
         let answer = call(
             &app,
             "POST",
