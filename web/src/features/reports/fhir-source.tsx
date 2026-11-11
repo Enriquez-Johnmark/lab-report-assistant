@@ -15,7 +15,7 @@ export function FhirSourceCard({ id }: { id: string }) {
   return (
     <Section
       title="Lab data (FHIR R4)"
-      description="Where the values come from: the file the lab sent, as imported. The table above is built from it; Claude only writes the words beside it."
+      description="Where the values come from: the lab's FHIR data as imported, either the file itself or, for a report fetched from the clinic's FHIR server, the report with its results and patient as the server returned them. The table above is built from it; Claude only writes the words beside it."
     >
       <Button variant="outline" className="self-start" onClick={() => setIsOpen((open) => !open)}>
         {isOpen ? "Hide the file" : "Show the file"}
