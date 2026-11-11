@@ -6,9 +6,18 @@
 //! the server (test servers are open); SMART Backend Services is the next
 //! step (`docs/product/spec.md`).
 
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
+use std::time::Duration;
 
 use reqwest::Url;
+use serde_json::{Value, json};
+use sqlx::PgPool;
+
+use crate::engine::audit::{self, AuditEvent};
+use crate::engine::clock::Clock;
+use crate::lab_reports::{ClinicId, ImportError, LabReports};
 
 /// A FHIR server's base address: https, or http only to this computer, with
 /// no credentials, query or fragment in it (I4). Kept without a trailing
@@ -56,4 +65,320 @@ impl fmt::Display for ServerAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0)
     }
+}
+
+/// How long a request may take, how large an answer may be and how many
+/// pages a search may run to.
+#[derive(Debug, Clone)]
+pub struct Limits {
+    /// For each request, answer included.
+    pub timeout: Duration,
+    /// For each answer.
+    pub max_bytes: usize,
+    /// Pages of one search.
+    pub max_pages: usize,
+}
+
+impl Default for Limits {
+    fn default() -> Self {
+        Self {
+            timeout: Duration::from_secs(20),
+            max_bytes: 10 << 20,
+            max_pages: 20,
+        }
+    }
+}
+
+/// What a fetch did.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export))]
+pub struct FetchOutcome {
+    /// The server's address.
+    pub server: String,
+    /// Lab reports imported.
+    #[cfg_attr(test, ts(type = "number"))]
+    pub imported: usize,
+    /// Already imported before, so skipped (I2).
+    #[cfg_attr(test, ts(type = "number"))]
+    pub skipped: usize,
+    /// Refused by the reader, each with its reason (I3).
+    pub refused: Vec<Refused>,
+}
+
+/// A lab report the reader refused.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(ts_rs::TS), ts(export))]
+pub struct Refused {
+    /// The report's id on the server.
+    pub report: String,
+    /// Why.
+    pub reason: String,
+}
+
+/// Why a fetch imported nothing.
+#[derive(Debug, thiserror::Error)]
+pub enum FetchError {
+    /// The operator hasn't set this clinic's server.
+    #[error("no FHIR server is set for this clinic")]
+    NoServer,
+    /// A request took longer than the limit.
+    #[error("timed out: the server didn't answer within {0} seconds")]
+    TimedOut(f64),
+    /// An answer was larger than the limit.
+    #[error("the server's answer is too large (over {0} MB)")]
+    TooLarge(usize),
+    /// The answer isn't a FHIR search result.
+    #[error("the server's answer is not FHIR: {0}")]
+    NotFhir(String),
+    /// The server answered with an error, or couldn't be reached.
+    #[error("the server answered {0}")]
+    Http(String),
+    /// The search went on past the page limit.
+    #[error("the search runs to more than {0} pages")]
+    TooManyPages(usize),
+    /// A next page lies on another server.
+    #[error("the server sent a next page on another server ({0}), which isn't followed")]
+    OutsideServer(String),
+    /// The database failed.
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
+}
+
+/// Each clinic's FHIR server, and fetching its lab reports.
+pub struct FhirServers {
+    pool: PgPool,
+    clock: Arc<dyn Clock>,
+    limits: Limits,
+}
+
+impl FhirServers {
+    /// The servers, with the default limits.
+    pub fn new(pool: PgPool, clock: Arc<dyn Clock>) -> Self {
+        Self {
+            pool,
+            clock,
+            limits: Limits::default(),
+        }
+    }
+
+    /// The same, with other limits.
+    #[must_use]
+    pub fn with_limits(mut self, limits: Limits) -> Self {
+        self.limits = limits;
+        self
+    }
+
+    /// Sets `clinic`'s server, logged as done by `actor`.
+    pub async fn set(&self, clinic: ClinicId, address: &ServerAddress, actor: &str) -> Result<(), sqlx::Error> {
+        let now = self.clock.now();
+        let mut tx = self.pool.begin().await?;
+        sqlx::query!(
+            "insert into fhir_servers (tenant_id, base_url, set_at) values ($1, $2, $3)
+             on conflict (tenant_id) do update set base_url = excluded.base_url, set_at = excluded.set_at",
+            clinic.as_uuid(),
+            address.as_str(),
+            now,
+        )
+        .execute(&mut *tx)
+        .await?;
+        let event = AuditEvent {
+            tenant: clinic,
+            at: now,
+            actor,
+            action: "fhir.server_set",
+            subject_type: "clinic",
+            subject_id: clinic.as_uuid(),
+            details: json!({ "server": address.as_str() }),
+        };
+        audit::record(&mut *tx, &event).await?;
+        tx.commit().await
+    }
+
+    /// `clinic`'s server, if one is set.
+    pub async fn get(&self, clinic: ClinicId) -> Result<Option<ServerAddress>, sqlx::Error> {
+        let stored = sqlx::query_scalar!(
+            "select base_url from fhir_servers where tenant_id = $1",
+            clinic.as_uuid()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        // Checked when it was set.
+        Ok(stored.map(ServerAddress))
+    }
+
+    /// Fetches `clinic`'s lab reports from its server and imports each one
+    /// not imported before, through the same reader as a file (I1–I3). The
+    /// whole search is read first, so an answer that fails a limit imports
+    /// nothing (I4). Every fetch, failed or not, is logged (I5).
+    pub async fn fetch(&self, clinic: ClinicId, actor: &str) -> Result<FetchOutcome, FetchError> {
+        let server = self.get(clinic).await?.ok_or(FetchError::NoServer)?;
+        let result = self.fetch_from(clinic, &server, actor).await;
+        let (action, details) = match &result {
+            Ok(outcome) => ("fhir.fetched", json!(outcome)),
+            Err(FetchError::Database(_)) => return result,
+            Err(err) => (
+                "fhir.fetch_failed",
+                json!({ "server": server.as_str(), "reason": err.to_string() }),
+            ),
+        };
+        let event = AuditEvent {
+            tenant: clinic,
+            at: self.clock.now(),
+            actor,
+            action,
+            subject_type: "fhir_server",
+            subject_id: clinic.as_uuid(),
+            details,
+        };
+        audit::record(&self.pool, &event).await?;
+        result
+    }
+
+    async fn fetch_from(
+        &self,
+        clinic: ClinicId,
+        server: &ServerAddress,
+        actor: &str,
+    ) -> Result<FetchOutcome, FetchError> {
+        let bundles = self.search(server).await?;
+        let reports = LabReports::new(self.pool.clone(), self.clock.clone());
+        let mut outcome = FetchOutcome {
+            server: server.to_string(),
+            imported: 0,
+            skipped: 0,
+            refused: Vec::new(),
+        };
+        for (report, bundle) in bundles {
+            match reports.import_as(clinic, &bundle, actor).await {
+                Ok(_) => outcome.imported += 1,
+                Err(ImportError::AlreadyImported(_)) => outcome.skipped += 1,
+                Err(ImportError::Database(err)) => return Err(err.into()),
+                Err(err) => outcome.refused.push(Refused {
+                    report,
+                    reason: err.to_string(),
+                }),
+            }
+        }
+        Ok(outcome)
+    }
+
+    /// Every lab report the server holds, each as a bundle of the report,
+    /// its patient and its results, as the reader expects a file to be.
+    async fn search(&self, server: &ServerAddress) -> Result<Vec<(String, String)>, FetchError> {
+        let client = reqwest::Client::builder()
+            .timeout(self.limits.timeout)
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|err| FetchError::Http(err.to_string()))?;
+        let origin = Url::parse(server.as_str()).map_err(|err| FetchError::Http(err.to_string()))?;
+        let mut url = format!(
+            "{server}/DiagnosticReport?category=LAB&_include=DiagnosticReport:result&_include=DiagnosticReport:subject&_count=50"
+        );
+        let mut resources: HashMap<String, Value> = HashMap::new();
+        let mut reports = Vec::new();
+        for page in 1.. {
+            if page > self.limits.max_pages {
+                return Err(FetchError::TooManyPages(self.limits.max_pages));
+            }
+            let answer = self.get_json(&client, &url).await?;
+            if answer["resourceType"] != "Bundle" || answer["type"] != "searchset" {
+                let what = answer["resourceType"].as_str().unwrap_or("something else");
+                return Err(FetchError::NotFhir(format!("expected a search result, got {what}")));
+            }
+            for entry in answer["entry"].as_array().into_iter().flatten() {
+                let resource = &entry["resource"];
+                let (Some(kind), Some(id)) = (resource["resourceType"].as_str(), resource["id"].as_str()) else {
+                    continue;
+                };
+                if kind == "DiagnosticReport" {
+                    reports.push(id.to_owned());
+                }
+                resources.insert(format!("{kind}/{id}"), resource.clone());
+            }
+            let next = answer["link"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|link| link["relation"] == "next")
+                .and_then(|link| link["url"].as_str());
+            let Some(next) = next else { break };
+            let next_url = Url::parse(next)
+                .map_err(|_| FetchError::NotFhir(format!("a next page that isn't an address: {next}")))?;
+            if next_url.origin() != origin.origin() {
+                return Err(FetchError::OutsideServer(next.to_owned()));
+            }
+            url = next.to_owned();
+        }
+        Ok(reports
+            .into_iter()
+            .map(|id| {
+                let bundle = bundle_for(&resources, &id);
+                (id, bundle)
+            })
+            .collect())
+    }
+
+    /// The JSON at `url`, within the limits.
+    async fn get_json(&self, client: &reqwest::Client, url: &str) -> Result<Value, FetchError> {
+        let timed_out = |err: reqwest::Error| {
+            if err.is_timeout() {
+                FetchError::TimedOut(self.limits.timeout.as_secs_f64())
+            } else {
+                FetchError::Http(format!("with an error: {err}"))
+            }
+        };
+        let mut response = client
+            .get(url)
+            .header(reqwest::header::ACCEPT, "application/fhir+json")
+            .send()
+            .await
+            .map_err(timed_out)?;
+        if !response.status().is_success() {
+            return Err(FetchError::Http(response.status().to_string()));
+        }
+        let is_json = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .is_some_and(|value| value.contains("json"));
+        if !is_json {
+            return Err(FetchError::NotFhir("the answer isn't JSON".to_owned()));
+        }
+        let too_large = FetchError::TooLarge(self.limits.max_bytes.div_ceil(1 << 20));
+        if response
+            .content_length()
+            .is_some_and(|length| length > self.limits.max_bytes as u64)
+        {
+            return Err(too_large);
+        }
+        let mut body = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(timed_out)? {
+            if body.len() + chunk.len() > self.limits.max_bytes {
+                return Err(too_large);
+            }
+            body.extend_from_slice(&chunk);
+        }
+        serde_json::from_slice(&body).map_err(|_| FetchError::NotFhir("the answer isn't JSON".to_owned()))
+    }
+}
+
+/// A collection bundle of the report `id`, its patient and the results it
+/// lists, from the resources the search returned. A missing one is left out,
+/// so the reader refuses the report with the reason.
+fn bundle_for(resources: &HashMap<String, Value>, id: &str) -> String {
+    let report = &resources[&format!("DiagnosticReport/{id}")];
+    let mut entries = vec![json!({ "resource": report })];
+    let references = report["subject"]["reference"].as_str().into_iter().chain(
+        report["result"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|r| r["reference"].as_str()),
+    );
+    for reference in references {
+        if let Some(resource) = resources.get(reference) {
+            entries.push(json!({ "resource": resource }));
+        }
+    }
+    json!({ "resourceType": "Bundle", "type": "collection", "entry": entries }).to_string()
 }
