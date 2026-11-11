@@ -14,7 +14,7 @@ const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic ad
                      import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
                      work [--record | --recorded] | serve [--recorded] | outbox-drain | eval [--record] | \
                      clinic add-physician --clinic ID --email EMAIL --name NAME | \
-                     clinic set-fhir-server --clinic ID --url URL | fetch --clinic ID";
+                     clinic set-fhir-server --clinic ID --url URL | fetch --clinic ID | load-made-up --url URL";
 
 fn main() -> ExitCode {
     let result = tokio::runtime::Builder::new_multi_thread()
@@ -91,6 +91,12 @@ async fn run() -> anyhow::Result<()> {
             for refused in &outcome.refused {
                 println!("refused {}: {}", refused.report, refused.reason);
             }
+            Ok(())
+        }
+        Some("load-made-up") => {
+            let address = ServerAddress::parse(option(&args, "--url")?)?;
+            let loaded = lab_report_assistant::fhir_server::load_made_up(&address).await?;
+            println!("loaded {loaded} made-up lab reports into {address}");
             Ok(())
         }
         Some("serve") => serve(args.iter().any(|arg| arg == "--recorded")).await,

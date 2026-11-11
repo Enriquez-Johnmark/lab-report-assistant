@@ -314,3 +314,75 @@ mod fetching {
         assert!(details["reason"].as_str().unwrap().contains("503"), "{details}");
     }
 }
+
+mod made_up_server {
+    use std::sync::Arc;
+
+    use lab_report_assistant::engine::accounts::Accounts;
+    use lab_report_assistant::engine::clock::SystemClock;
+    use lab_report_assistant::fhir_server::{FhirServers, ServerAddress, load_made_up};
+    use sqlx::PgPool;
+    use wiremock::matchers::{body_partial_json, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn the_made_up_reports_load_only_into_a_server_on_this_computer() {
+        let public = ServerAddress::parse("https://hapi.fhir.org/baseR4").unwrap();
+
+        let refused = load_made_up(&public).await.unwrap_err();
+
+        assert!(refused.to_string().contains("this computer"), "{refused}");
+    }
+
+    #[tokio::test]
+    async fn loading_sends_each_made_up_report_as_one_transaction() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/fhir"))
+            .and(body_partial_json(
+                serde_json::json!({ "resourceType": "Bundle", "type": "transaction" }),
+            ))
+            .respond_with(ResponseTemplate::new(200).set_body_raw("{}", "application/fhir+json"))
+            .expect(30)
+            .mount(&server)
+            .await;
+        let address = ServerAddress::parse(&format!("{}/fhir", server.uri())).unwrap();
+
+        assert_eq!(load_made_up(&address).await.unwrap(), 30);
+    }
+
+    /// The real thing, when CI runs HAPI FHIR beside the tests
+    /// (`HAPI_FHIR_URL`): load the made-up reports, then fetch them back.
+    /// Without it (on a laptop, offline), there is nothing to talk to.
+    #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+    async fn fetching_from_hapi_fhir_imports_the_made_up_reports(pool: PgPool) {
+        let Ok(url) = std::env::var("HAPI_FHIR_URL") else {
+            eprintln!("HAPI_FHIR_URL is not set: no HAPI FHIR server to fetch from");
+            return;
+        };
+        let address = ServerAddress::parse(&url).unwrap();
+        let metadata = format!("{address}/metadata");
+        for _ in 0..90 {
+            if reqwest::get(&metadata)
+                .await
+                .is_ok_and(|answer| answer.status().is_success())
+            {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+        load_made_up(&address).await.unwrap();
+        let clock = Arc::new(SystemClock);
+        let clinic = Accounts::new(pool.clone(), clock.clone())
+            .create("Example Womens Health", "admin@example.test")
+            .await
+            .unwrap();
+        let servers = FhirServers::new(pool.clone(), clock);
+        servers.set(clinic, &address, "operator").await.unwrap();
+
+        let outcome = servers.fetch(clinic, "operator").await.unwrap();
+
+        assert_eq!(outcome.imported + outcome.skipped, 30, "{outcome:?}");
+        assert!(outcome.refused.is_empty(), "{outcome:?}");
+    }
+}

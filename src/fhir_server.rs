@@ -34,6 +34,11 @@ pub enum AddressError {
     /// Plain http to another computer, or another scheme.
     #[error("{0} must use https (plain http is only allowed to this computer)")]
     NotHttps(String),
+    /// Not on this computer, where only the made-up reports may be loaded.
+    #[error(
+        "{0} is not on this computer: the made-up reports are only loaded into a local FHIR server, never a public one"
+    )]
+    NotThisComputer(String),
     /// A user name, password, query or fragment.
     #[error("{0} must be a plain base address, with no login, query or fragment")]
     NotPlain(String),
@@ -59,6 +64,76 @@ impl ServerAddress {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    /// Whether the server is on this computer.
+    pub fn is_on_this_computer(&self) -> bool {
+        Url::parse(&self.0).is_ok_and(|url| matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")))
+    }
+}
+
+/// Why the made-up reports weren't loaded.
+#[derive(Debug, thiserror::Error)]
+pub enum LoadError {
+    /// The server isn't on this computer.
+    #[error(transparent)]
+    Address(#[from] AddressError),
+    /// The server refused a report, or couldn't be reached.
+    #[error("the server didn't take {report}: {reason}")]
+    Refused {
+        /// Which demo file.
+        report: String,
+        /// What the server said.
+        reason: String,
+    },
+}
+
+/// Loads the made-up lab reports into a FHIR server on this computer, each
+/// as one transaction, for the demo and the CI test; returns how many. Any
+/// other server is refused: nothing is ever uploaded to a public one, since
+/// anyone can read them.
+pub async fn load_made_up(server: &ServerAddress) -> Result<usize, LoadError> {
+    if !server.is_on_this_computer() {
+        return Err(AddressError::NotThisComputer(server.to_string()).into());
+    }
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()
+        .map_err(|err| LoadError::Refused {
+            report: "any".to_owned(),
+            reason: err.to_string(),
+        })?;
+    let files = crate::demo_data::generate();
+    for file in &files {
+        let refused = |reason: String| LoadError::Refused {
+            report: file.name.clone(),
+            reason,
+        };
+        let mut bundle: Value = serde_json::from_str(&file.json).map_err(|err| refused(err.to_string()))?;
+        bundle["type"] = json!("transaction");
+        for entry in bundle["entry"].as_array_mut().into_iter().flatten() {
+            let resource = &entry["resource"];
+            let target = format!(
+                "{}/{}",
+                resource["resourceType"].as_str().unwrap_or_default(),
+                resource["id"].as_str().unwrap_or_default()
+            );
+            entry["request"] = json!({ "method": "PUT", "url": target });
+            if let Some(entry) = entry.as_object_mut() {
+                entry.remove("fullUrl");
+            }
+        }
+        let answer = client
+            .post(server.as_str())
+            .header(reqwest::header::CONTENT_TYPE, "application/fhir+json")
+            .body(bundle.to_string())
+            .send()
+            .await
+            .map_err(|err| refused(err.to_string()))?;
+        if !answer.status().is_success() {
+            return Err(refused(answer.status().to_string()));
+        }
+    }
+    Ok(files.len())
 }
 
 impl fmt::Display for ServerAddress {
