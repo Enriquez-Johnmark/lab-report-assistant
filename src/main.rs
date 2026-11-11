@@ -7,12 +7,14 @@ use std::sync::Arc;
 use anyhow::Context;
 use lab_report_assistant::engine::accounts::Accounts;
 use lab_report_assistant::engine::clock::SystemClock;
+use lab_report_assistant::fhir_server::{FhirServers, ServerAddress};
 use lab_report_assistant::lab_reports::{ClinicId, LabReports};
 
 const USAGE: &str = "usage: lab-report-assistant migrate | demo-data | clinic add --name NAME --email EMAIL | \
                      import --clinic ID FILE... | evidence --commit SHA [--signed true|false] [--junit FILE] [--out FILE] | \
                      work [--record | --recorded] | serve [--recorded] | outbox-drain | eval [--record] | \
-                     clinic add-physician --clinic ID --email EMAIL --name NAME";
+                     clinic add-physician --clinic ID --email EMAIL --name NAME | \
+                     clinic set-fhir-server --clinic ID --url URL | fetch --clinic ID";
 
 fn main() -> ExitCode {
     let result = tokio::runtime::Builder::new_multi_thread()
@@ -64,6 +66,33 @@ async fn run() -> anyhow::Result<()> {
             println!("added {name} <{email}>");
             Ok(())
         }
+        Some("clinic") if args.get(1).map(String::as_str) == Some("set-fhir-server") => {
+            let clinic = clinic_option(&args)?;
+            let address = ServerAddress::parse(option(&args, "--url")?)?;
+            FhirServers::new(connect().await?, Arc::new(SystemClock))
+                .set(clinic, &address, "operator")
+                .await
+                .context("setting the FHIR server")?;
+            println!("set the clinic's FHIR server to {address}");
+            Ok(())
+        }
+        Some("fetch") => {
+            let clinic = clinic_option(&args)?;
+            let outcome = FhirServers::new(connect().await?, Arc::new(SystemClock))
+                .fetch(clinic, "operator")
+                .await?;
+            println!(
+                "from {}: {} imported, {} already there, {} refused",
+                outcome.server,
+                outcome.imported,
+                outcome.skipped,
+                outcome.refused.len()
+            );
+            for refused in &outcome.refused {
+                println!("refused {}: {}", refused.report, refused.reason);
+            }
+            Ok(())
+        }
         Some("serve") => serve(args.iter().any(|arg| arg == "--recorded")).await,
         Some("outbox-drain") => outbox_drain().await,
         Some("eval") => evaluate(args.iter().any(|arg| arg == "--record")).await,
@@ -89,6 +118,14 @@ fn write_demo_data() -> anyhow::Result<()> {
     }
     println!("wrote {} made-up lab reports to {}", files.len(), dir.display());
     Ok(())
+}
+
+/// The clinic named by `--clinic`.
+fn clinic_option(args: &[String]) -> anyhow::Result<ClinicId> {
+    Ok(option(args, "--clinic")?
+        .parse::<uuid::Uuid>()
+        .context("--clinic is not a clinic ID")?
+        .into())
 }
 
 /// The value after `name` in `args`.
