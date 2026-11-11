@@ -26,7 +26,12 @@ $bin clinic add-physician --clinic "$family" --email dr.family@family.example.te
 fhir=http://127.0.0.1:8090/fhir
 curl -sf "$fhir/metadata" >/dev/null || docker compose --profile fhir up -d hapi
 for _ in $(seq 1 90); do curl -sf "$fhir/metadata" >/dev/null && break; sleep 2; done
+curl -sf "$fhir/metadata" >/dev/null || { echo "HAPI FHIR didn't start at $fhir" >&2; exit 1; }
 $bin load-made-up --url "$fhir" >/dev/null
+# A server already on that port is reused only if it holds just the 30
+# made-up reports, so the walkthrough fetches exactly those.
+reports=$(curl -sf "$fhir/DiagnosticReport?category=LAB&_summary=count" | grep -o '"total" *: *[0-9]*' | grep -o '[0-9]*$')
+[ "$reports" = 30 ] || { echo "$fhir holds $reports lab reports, not the 30 made-up ones: stop it and run again" >&2; exit 1; }
 $bin clinic set-fhir-server --clinic "$clinic" --url "$fhir" >/dev/null
 curl -s -X DELETE http://127.0.0.1:8025/api/v1/messages >/dev/null
 

@@ -19,10 +19,14 @@ async function shot(page: Page, name: string) {
 test("screenshots", async ({ browser }) => {
   const admin = await browser.newPage({ viewport: desktop, deviceScaleFactor: 2 })
   await logIn(admin, ADMIN)
-  // The walkthrough has usually fetched them already, and sent one report;
-  // fetching again then imports nothing (I2), which is what this shows.
-  await admin.getByRole("button", { name: "Fetch new lab reports" }).click()
-  await expect(admin.getByRole("status").filter({ hasText: "imported" })).toBeVisible()
+  // Fetched (by the walkthrough, or here), then fetched again: the second
+  // time imports nothing (I2), which is what this shows.
+  const fetchButton = admin.getByRole("button", { name: "Fetch new lab reports" })
+  const fetched = admin.getByRole("status").filter({ hasText: "imported" })
+  await fetchButton.click()
+  await expect(fetched).toBeVisible()
+  await fetchButton.click()
+  await expect(fetched).toContainText("0 imported, 30 already here")
   await expect(admin.getByRole("row").nth(1)).toBeVisible()
   // Every report is drafted within a round or two of the worker.
   await expect(admin.getByText("Drafting")).toHaveCount(0, { timeout: 90_000 })
