@@ -50,7 +50,7 @@ export function ActivityPage() {
     <>
       <PageHeader
         title="Activity"
-        description="Every step on every lab report: who did it and when."
+        description="Every step on every lab report, and every fetch from the FHIR server: who did it and when."
       />
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-col gap-1.5">
