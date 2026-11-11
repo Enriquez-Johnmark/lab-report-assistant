@@ -86,41 +86,41 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
   if (!draft) {
     return (
       <div className="p-4">
-        <Alert className="border-0 bg-muted">
+        <Notice tone="info">
           <Spinner />
           <AlertTitle>Drafting</AlertTitle>
           <AlertDescription>The draft appears here when it's ready.</AlertDescription>
-        </Alert>
+        </Notice>
       </div>
     )
   }
   return (
-    <div className="flex flex-col gap-3 border-b px-4 py-3 empty:hidden">
+    <div className="flex flex-col gap-3 border-b px-4 py-3">
       <p className="text-sm text-muted-foreground">
         <span className="font-medium text-foreground">Draft {draft.attempt}</span> ·{" "}
         {sourceLabel(draft.source)}
       </p>
       {draft.rejected ? (
-        <Alert className="border-0 bg-muted">
+        <Notice tone="info">
           <Spinner />
           <AlertTitle>A new draft is being written</AlertTitle>
           <AlertDescription>
             You asked for a new draft. This one can't be approved; the new one appears here when
             it's ready.
           </AlertDescription>
-        </Alert>
+        </Notice>
       ) : null}
       {report.approved_at ? (
-        <Alert className="border-0 bg-muted">
+        <Notice tone="info">
           <CircleCheckIcon />
           <AlertTitle>Approved</AlertTitle>
           <AlertDescription>
             This exact text was approved on {formatDateTime(report.approved_at)}.
           </AlertDescription>
-        </Alert>
+        </Notice>
       ) : null}
       {draft.blocked ? (
-        <Alert variant="destructive" className="border-0 bg-destructive/[0.06]">
+        <Notice tone="failed">
           <CircleAlertIcon />
           <AlertTitle>This draft failed a check, so it can't be approved</AlertTitle>
           <AlertDescription>
@@ -130,10 +130,10 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
               ))}
             </ul>
           </AlertDescription>
-        </Alert>
+        </Notice>
       ) : null}
       {draft.warnings.length > 0 ? (
-        <Alert variant="warning" className="border-0 bg-warning/10">
+        <Notice tone="caution">
           <TriangleAlertIcon />
           <AlertTitle>Wording the model wouldn't be allowed</AlertTitle>
           <AlertDescription>
@@ -144,9 +144,31 @@ function DraftStatus({ report }: { report: LabReportDetail }) {
             </ul>
             It can still be approved: a physician may write this.
           </AlertDescription>
-        </Alert>
+        </Notice>
       ) : null}
     </div>
+  )
+}
+
+/** A notice inside the report sheet: a tinted band, not a bordered box
+ *  inside the sheet's own border. */
+function Notice({
+  tone,
+  children,
+}: {
+  tone: "info" | "failed" | "caution"
+  children: React.ReactNode
+}) {
+  const styles = {
+    info: "border-0 bg-muted",
+    failed: "border-0 bg-destructive/[0.06]",
+    caution: "border-0 bg-warning/10",
+  } as const
+  const variant = tone === "failed" ? "destructive" : tone === "caution" ? "warning" : "default"
+  return (
+    <Alert variant={variant} className={styles[tone]}>
+      {children}
+    </Alert>
   )
 }
 
