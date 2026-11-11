@@ -44,3 +44,46 @@ An audit of the physician's, administrator's and patient's pages with the `ui-ta
 - Before each web commit, `pnpm lint`, `typecheck`, `test` and `build` passed too.
 - The browser tests (`pnpm e2e`, 3 tests) passed against the fixed build.
 - The same states were captured again at both sizes and inspected: findings 1–10 are resolved in those captures.
+
+# A clinical look (M7), 2026-11-11
+
+The owner asked for pages that don't look AI-made. The `ui-taste` skill's new-work, craft and anti-slop playbooks were applied. The product, its rules and its words are unchanged, and the rules of the look are in `docs/frontend.md`. There was no image tool, so there's no generated target: the incumbent screens were the baseline, and each was captured again afterwards.
+
+## Before and after
+
+| Page | Before | After |
+|---|---|---|
+| The queue | ![](ui/m7-before-queue.jpg) | ![](ui/m7-after-queue.jpg) |
+| A blocked draft | ![](ui/m7-before-review.jpg) | ![](ui/m7-after-review.jpg) |
+| The patient's page | ![](ui/m7-before-patient.jpg) | ![](ui/m7-after-patient.jpg) |
+
+## What changed
+
+- **The frame:** shadcn's stock sidebar became a letterhead across the top: the product, then the clinic and who is logged in, with the places beneath it.
+- **Colour:** one clinical teal and one warm grey family replace shadcn's neutral palette. The dark-theme tokens, still shadcn's default blue, are gone; the app is light only.
+- **Type:** IBM Plex Sans, bundled, replaces Geist. Table headings are small, spaced capitals, as on a printed lab report.
+- **The queue:** "Ready to review" is a small teal dot and words, not a solid teal pill on every row. The list sits on one white sheet.
+- **The review page:** a report sheet. The draft's state is at the top, the ruled results table in the middle, and the actions in its footer.
+  - "Within range" is quiet text; a value outside the range is bold, with a tinted label.
+  - The FHIR file and the timeline are plain sections under a rule, not cards.
+  - Notices are tinted bands, not boxes inside the sheet.
+- **The patient's page:** a short letter on a sheet. The clinic's name sits across the top above a teal rule, then the results in the same ruled table. The PDF (M10) will follow it.
+
+## The anti-slop counts (the skill's mechanical pre-flight)
+
+| Check | Before | After |
+|---|---|---|
+| Accent hues | 2 (teal, plus shadcn's blue in the dark tokens) | 1 (teal, hue 195) |
+| Grey families | shadcn's neutral (no hue) | 1 warm family (hues 75–85, chroma ≤ 0.012) |
+| Meaning colours | red, amber, green | the same, each always with words: red for a blocked draft, amber for out of range, green for sent |
+| Accent spent per queue row | a solid pill on every row | an 8px dot |
+| Corner radii in app code | 8 steps, no rule | 3, from one rule: controls 6px, panels 8px, pills round |
+| Gradients, glow, blur, emoji | 0 | 0 |
+| Labels for one intent | 1 each | 1 each |
+| Cards inside cards | the editor's card in the page's flow | none |
+
+## Checks
+
+- After each commit: `cargo fmt --check`, clippy and `cargo nextest run` (164 tests), plus `pnpm lint`, `typecheck`, `test` and `build`.
+- The browser tests (`pnpm e2e`, 3 tests) pass against the new build.
+- The queue, a blocked draft, the patient's link page and report, Sent, Activity and the login page were captured at 1280×860 and 390×844 and inspected.
