@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import { formatDateTime } from "@/lib/dates"
 import { sentStatuses, statusLabel } from "@/lib/labels"
+import { useFetchControl } from "@/features/reports/fetch-from-server"
 import { useLoadDemoData, useReports } from "@/features/reports/queries"
 
 /** How many reports wait for a physician, and how many a check blocked. */
@@ -60,6 +61,8 @@ export function ReportsPage() {
   )
   const me = useMe()
   const demo = useLoadDemoData()
+  const isAdmin = me.data?.role === "administrator"
+  const fetchControl = useFetchControl(isAdmin && !isSentView ? me.data?.fhir_server : null)
   const loadDemo = (
     <Button variant="outline" onClick={() => demo.mutate()} disabled={demo.isPending}>
       {demo.isPending ? (
@@ -83,8 +86,10 @@ export function ReportsPage() {
               : "Each lab report, its draft and where it stands. Only a physician can approve."
         }
       >
-        {reports.data?.length && me.data?.role === "administrator" ? loadDemo : null}
+        {fetchControl.button}
+        {reports.data?.length && isAdmin && !isSentView ? loadDemo : null}
       </PageHeader>
+      {fetchControl.result}
       {demo.isError ? <SaveError error={demo.error} /> : null}
       {demo.isSuccess && demo.data.imported === 0 ? (
         <p className="text-sm text-muted-foreground">

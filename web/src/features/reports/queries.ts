@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api } from "@/api/client"
 import type { ApproveRequest } from "@/api/generated/ApproveRequest"
 import type { AuditView } from "@/api/generated/AuditView"
+import type { FetchOutcome } from "@/api/generated/FetchOutcome"
 import type { DemoDataLoaded } from "@/api/generated/DemoDataLoaded"
 import type { EditOutcome } from "@/api/generated/EditOutcome"
 import type { FhirSource } from "@/api/generated/FhirSource"
@@ -80,5 +81,14 @@ export function useFhirSource(id: string, enabled: boolean) {
     queryFn: () => api<FhirSource>("GET", `/api/lab-reports/${id}/fhir`),
     enabled,
     staleTime: Infinity,
+  })
+}
+
+/** I1: the administrator fetches new lab reports from the clinic's FHIR server. */
+export function useFetchFromServer() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => api<FetchOutcome>("POST", "/api/fhir-server/fetch"),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: reportKeys.all() }),
   })
 }
