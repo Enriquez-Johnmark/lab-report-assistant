@@ -32,9 +32,16 @@ A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/w
 ## Where the data comes from
 
 - **In the demo:** 30 made-up lab reports for 20 made-up patients from a made-up lab, as FHIR R4 files in [`demo/lab-reports/`](demo/lab-reports/). FHIR is the standard format record systems and labs use to exchange health data: each file is a Bundle holding the patient, the lab report (a `DiagnosticReport`) and one `Observation` per test, with its value, unit, the lab's range and flag. They're written by a generator from a fixed seed (`cargo run -- demo-data`), and every resource carries the HL7 "test health data" label (`HTEST`), so no tool can mistake one for a real record.
-- **Getting it in:** the administrator presses "Load the demo data", or `cargo run -- import --clinic <ID> <files>` imports any FHIR R4 lab Bundle. Each file is checked strictly; a broken one is refused with the reason and nothing is imported.
+- **Getting it in, from a FHIR server:** the administrator presses "Fetch new lab reports" (or the operator runs `cargo run -- fetch --clinic <ID>`). The app searches the clinic's FHIR server for its lab reports (`DiagnosticReport?category=LAB`, with each report's results and patient included), follows the server's next pages, and imports each one not imported before.
+  - Every report goes through the same strict reader as a file. One it refuses is listed with the reason, and the others still import.
+  - The server's address is set per clinic by the operator (`clinic set-fhir-server`): https only, except a server on this computer.
+  - Each request has a time limit and each answer a size limit. A slow, oversized or non-FHIR answer imports nothing and says why.
+  - Every fetch is in the audit log and on the Activity page.
+  - CI runs this against a real HAPI FHIR server (v8.4.0-1).
+  - For the demo, `docker compose --profile fhir up -d` starts HAPI FHIR locally, and `cargo run -- load-made-up --url http://localhost:8090/fhir` loads the made-up reports into it. That command refuses any server not on this computer, so nothing is uploaded to a public test server.
+- **Getting it in, from files:** the administrator presses "Load the demo data", or `cargo run -- import --clinic <ID> <files>` imports any FHIR R4 lab Bundle. Each file is checked strictly; a broken one is refused with the reason and nothing is imported.
 - **In the app:** the review page shows the lab's own file under "Lab data (FHIR R4)", exactly as imported; the results table is built from it, and Claude only writes the words beside it.
-- **In a real clinic:** the same Bundles would come from the clinic's record system or its lab through their FHIR API instead of files. Connecting to a live system is outside this first version (`docs/product/brief.md`); nothing here has seen real patient data.
+- **In a real clinic:** the same fetch would point at the clinic's record system or its lab's FHIR API. A real system needs a login first; SMART Backend Services is the next step, since test servers are open. Nothing here has seen real patient data.
 
 ## What the code enforces
 
