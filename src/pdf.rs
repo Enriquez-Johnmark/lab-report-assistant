@@ -221,7 +221,8 @@ fn width(text: &str, size: f32) -> f32 {
     em * size * 0.3528
 }
 
-/// `text` broken into lines no wider than `max` mm, at word boundaries.
+/// `text` broken into lines no wider than `max` mm, at word boundaries
+/// where it can be.
 fn wrap(text: &str, max: f32, size: f32) -> Vec<String> {
     let mut lines: Vec<String> = Vec::new();
     let mut line = String::new();
@@ -231,15 +232,41 @@ fn wrap(text: &str, max: f32, size: f32) -> Vec<String> {
         } else {
             format!("{line} {word}")
         };
-        if width(&candidate, size) > max && !line.is_empty() {
-            lines.push(std::mem::take(&mut line));
-            line = word.to_owned();
-        } else {
+        if width(&candidate, size) <= max {
             line = candidate;
+            continue;
+        }
+        if !line.is_empty() {
+            lines.push(std::mem::take(&mut line));
+        }
+        // A word too wide for the column on its own is broken where it must
+        // be, so it never runs into the next column.
+        for c in word.chars() {
+            line.push(c);
+            if width(&line, size) > max && line.chars().count() > 1 {
+                line.pop();
+                lines.push(std::mem::replace(&mut line, c.to_string()));
+            }
         }
     }
     if !line.is_empty() || lines.is_empty() {
         lines.push(line);
     }
     lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{COLUMNS, width, wrap};
+
+    #[test]
+    fn k2_a_word_wider_than_its_column_is_broken_to_fit_and_keeps_every_letter() {
+        let word = "Thyroperoxidase-antibodies(TPOAb)";
+
+        let lines = wrap(word, COLUMNS[0].1, 9.5);
+
+        assert!(lines.len() > 1, "{lines:?}");
+        assert!(lines.iter().all(|line| width(line, 9.5) <= COLUMNS[0].1), "{lines:?}");
+        assert_eq!(lines.concat(), word);
+    }
 }
