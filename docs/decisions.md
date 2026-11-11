@@ -18,3 +18,10 @@ Every decision the owner made, dated.
 - **Workflow skills:** Matt Pocock's `tdd`, `grilling` (with `grill-me`) and `domain-modeling`, pinned at `4ae2317` (MIT) and recorded in `docs/frontend.md`.
 - **M5 result (2026-11-10):** Sonnet passes 27 of 30 demo drafts (90%, the G2 target) at US$0.0085 a report; Haiku 16 of 30 at US$0.0004. Sonnet stays the default. The checks were not tuned on these drafts.
 - **UI polish with `ui-taste`:** Uizze's `ui-taste` skill (v0.3.0, Apache-2.0) is added, pinned and recorded, without the paid Uizze MCP. Every product gets an audit (look only, with real desktop and phone screenshots), then a polish pass that keeps its current look, one product at a time: Lab Report Assistant, Kompleto, Balanse, Review Triage Agent, Help Assistant, then the portfolio; each product's screenshots, video and portfolio page are remade before the next starts. Every rule that protects an acceptance criterion stays in code, and every test must still pass (owner: "yes to all").
+
+## 2026-11-11
+
+- **Version 2** (owner: "yes to all"): a clinical look of its own, made with `ui-taste` before the new features (M7); fetching lab reports from a FHIR server (M8); a second made-up clinic side by side (M9); PDF reports in the patient page's design (M10); then the showcase (M11). The details and 11 new acceptance criteria (I1–I5, J1–J2, K1–K4) are in `docs/product/spec.md`.
+  - Tests use a fake FHIR server inside the tests, CI runs HAPI FHIR v8.4.0-1, and nothing is uploaded to public test servers.
+  - There is no FHIR server login yet; SMART Backend Services is the next step.
+  - Left out on purpose: patient replies and scheduling (they belong to Care Reminders and Care Message Assistant), other languages, a mobile app and payments.

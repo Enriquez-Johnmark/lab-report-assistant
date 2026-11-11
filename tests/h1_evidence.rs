@@ -96,7 +96,8 @@ fn h1_the_real_spec_and_build_order_place_every_criterion_in_a_milestone() {
     let spec = std::fs::read_to_string(format!("{root}/docs/product/spec.md")).unwrap();
     let arch = std::fs::read_to_string(format!("{root}/docs/architecture.md")).unwrap();
     let evidence = Evidence::build(&spec, &arch, &junit("")).unwrap();
-    assert_eq!(evidence.rows.len(), 38);
+    // 38 in the first version, 11 more in version 2.
+    assert_eq!(evidence.rows.len(), 49);
     assert!(
         evidence.rows.iter().all(|row| !row.milestone.is_empty()),
         "{:?}",

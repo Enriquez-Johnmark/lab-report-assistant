@@ -165,3 +165,54 @@ Each criterion has a test whose name starts with its ID, e.g. `b4_a_draft_with_a
 
 - **H1** Every acceptance criterion is matched to its tests and their results; a criterion with no passing test fails the build.
 - **H2** The page names the commit it was built from and whether that commit is signed.
+
+## Version 2 (Round 1, 2026-11-11)
+
+Decided with the owner after the first version was done; the build order is in `docs/architecture.md` (M7–M11).
+
+- **A clinical look first (M7).** The pages lose the stock template look, with the `ui-taste` skill's new-work, craft and anti-slop playbooks:
+  - one deep clinical teal, spent only on the primary action and the current state, and one grey family;
+  - amber and red only for values outside the range and blocked drafts, always with words;
+  - an open-licence sans bundled with the app, a clear type scale, and tabular figures for every value;
+  - one corner rule (controls 6px, panels 8px, status pills fully round), written into `docs/frontend.md`;
+  - the review page reads like a report sheet;
+  - the patient's page and the PDF share one design: a short letter from the clinic.
+
+  Before-and-after screenshots and the skill's anti-slop counts go into `docs/ui-audit.md`. The look changes no rule.
+- **Fetching from a FHIR server (M8).**
+  - The administrator's "Fetch new lab reports" button, or the operator's command, asks the clinic's FHIR server for its lab reports (`DiagnosticReport`, category LAB) with their results and patient.
+  - Each report goes through the same strict reader as a file; one already imported is skipped.
+  - The server's address is set by the operator, per clinic: https only, except a server on this computer. Answers have a time limit and a size limit, since they are untrusted.
+  - There is no login to the FHIR server in this version (test servers are open). SMART Backend Services is the documented next step.
+  - A patient with no email is imported, and their approved report shows "no email to send to".
+- **Where the FHIR server is.**
+  - Tests use a small fake FHIR server inside the tests, with no network.
+  - CI also runs one test against HAPI FHIR v8.4.0-1.
+  - The demo uses a local HAPI FHIR server loaded with the made-up reports.
+  - Nothing is ever uploaded to a public test server, since anyone can read them.
+- **Several clinics (M9).** The demo gains a second made-up clinic, Example Family Clinic, with its own staff, reports and FHIR server address.
+- **PDF reports (M10).**
+  - The patient downloads their approved report as a PDF after "Show my report"; the physician can from the Sent page.
+  - The PDF holds the exact approved text, the lab's values, the demo banner, and who approved it and when.
+  - It is made on request and never stored, only while the approved text still stands; every download is logged.
+- **Showcase (M11):** README, screenshots, walkthrough and portfolio page.
+
+### I. Fetching from a FHIR server
+
+- **I1** "Fetch new lab reports" imports every lab report on the clinic's FHIR server, with its results and patient, through the same reader as a file, and drafting starts.
+- **I2** A report already imported from that server is skipped: fetching twice adds nothing.
+- **I3** A report the reader refuses is skipped with its reason, and the others still import.
+- **I4** Only an https address, or one on this computer, can be set; an answer that is too slow, too large or not FHIR imports nothing and says why.
+- **I5** Every fetch is in the audit log: who started it, from which server, and how many reports were imported, skipped and refused.
+
+### J. Several clinics
+
+- **J1** With two clinics, each one's staff sees only its own lab reports, Sent list and activity, in the pages and the API.
+- **J2** Fetching for one clinic reads only that clinic's FHIR server and imports only into that clinic.
+
+### K. PDF reports
+
+- **K1** The patient can download their approved report as a PDF after "Show my report"; the physician can from the Sent page.
+- **K2** The PDF holds exactly the approved explanations, the lab's values and ranges, the demo banner, and who approved it and when.
+- **K3** There is no PDF before approval, or once the approved text no longer stands.
+- **K4** Every PDF download is in the audit log.
