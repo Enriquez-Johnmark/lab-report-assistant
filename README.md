@@ -33,7 +33,7 @@ An AI assistant that turns a patient's lab results into a plain-language report 
 
 ## See it
 
-A two-and-a-half-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
+A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/walkthrough.mp4); the screenshots and how they're made are in [`docs/showcase/`](docs/showcase/README.md).
 
 | The physician reviews Claude's draft beside the lab's own values | The patient's page, from the emailed link |
 |---|---|

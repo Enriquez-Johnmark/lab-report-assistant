@@ -1,6 +1,6 @@
 # Spec: Lab Report Assistant
 
-Decided round by round with the owner; the single source for spec decisions. The brief is `brief.md`. Status: **complete** (Rounds 1–3 decided 2026-11-10), with 38 acceptance criteria.
+Decided round by round with the owner; the single source for spec decisions. The brief is `brief.md`. Status: **complete** (Rounds 1–3 decided 2026-11-10, with 38 acceptance criteria; version 2, Round 1, decided 2026-11-11, adding 11), with 49 acceptance criteria.
 
 ## Words
 

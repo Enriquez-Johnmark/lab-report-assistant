@@ -1,6 +1,6 @@
 # Showcase
 
-Screenshots, a sample PDF and a two-and-a-half-minute captioned walkthrough of version 2 at the made-up clinic, Example Women's Health. The administrator fetches the 30 made-up lab reports from the clinic's FHIR server (HAPI FHIR, running on this computer), and Claude's drafts are checked. The physician looks at the lab's own FHIR file and approves a draft. The patient opens it from the emailed link and downloads it as a PDF. A second made-up clinic, Example Family Clinic, sees none of it.
+Screenshots, a sample PDF and a two-minute captioned walkthrough of version 2 at the made-up clinic, Example Women's Health. The administrator fetches the 30 made-up lab reports from the clinic's FHIR server (HAPI FHIR, running on this computer), and Claude's drafts are checked. The physician looks at the lab's own FHIR file and approves a draft. The patient opens it from the emailed link and downloads it as a PDF. A second made-up clinic, Example Family Clinic, sees none of it.
 
 The explanations are Claude Sonnet's, made with the owner's API key on 2026-11-10 and replayed from `evalset/recorded/` (the same drafts `evalset/report.md` measures). Everything is made up: the clinic, the patients, the values and the `example.test` addresses.
 

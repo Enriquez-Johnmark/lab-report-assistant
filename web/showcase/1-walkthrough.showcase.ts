@@ -19,7 +19,7 @@ import {
 
 const size = { width: 1280, height: 720 }
 
-/** About three minutes from an empty clinic to a patient reading their
+/** Just over two minutes from an empty clinic to a patient reading their
  *  report and its PDF, with captions; saved as docs/showcase/walkthrough.mp4.
  *  Runs first, on a fresh clinic whose FHIR server holds the made-up
  *  reports; the screenshots follow on the same data. */
