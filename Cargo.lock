@@ -1229,6 +1229,7 @@ dependencies = [
  "hex",
  "nudgewright",
  "quick-xml",
+ "reqwest",
  "secrecy",
  "serde",
  "serde_json",

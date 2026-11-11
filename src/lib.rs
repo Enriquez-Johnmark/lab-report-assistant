@@ -11,6 +11,7 @@ pub mod drafts;
 pub mod eval;
 pub mod evidence;
 pub mod fhir;
+pub mod fhir_server;
 pub mod html;
 pub mod lab_reports;
 pub mod made_up;
