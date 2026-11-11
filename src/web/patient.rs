@@ -213,8 +213,10 @@ fn message(status: StatusCode, title: &str, text: &str) -> Response {
 
 /// A short letter from the clinic on a sheet of paper, in the app's look
 /// (`docs/frontend.md`): warm greys, one clinical teal, amber only for a value
-/// outside the range, always with words.
-const STYLE: &str = "*{box-sizing:border-box}\
+/// outside the range, always with words. The font is the app's, served from
+/// `web/public/fonts/` (OFL, `OFL.txt` beside it).
+const STYLE: &str = "@font-face{font-family:'IBM Plex Sans';font-weight:100 700;font-display:swap;\
+     src:url(/fonts/ibm-plex-sans-latin.woff2) format('woff2')}*{box-sizing:border-box}\
      body{margin:0;padding:1.5rem 1rem 3rem;background:#f8f7f4;color:#26231f;\
      font:16px/1.6 'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif}\
      main{max-width:46rem;margin:0 auto;background:#fff;border:1px solid #e2ded6;border-radius:8px;padding:0 1.5rem 1.5rem;overflow:hidden}\
