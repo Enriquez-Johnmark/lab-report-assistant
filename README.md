@@ -51,9 +51,9 @@ A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/w
 - **A physician approves the exact text:** only a physician may approve; the approval binds a hash of the text, and any change needs approving again (`c1_*` to `c7_*`).
 - **Sent once:** the notice goes through the engine's outbox; a crash mid-send never sends it twice (`d2_*`).
 - **Every step is logged** in an append-only audit log the database refuses to change (`e1_*`, `e2_*`).
-- **Each clinic sees only its own data** (`a4_*`).
+- **Each clinic sees only its own data:** its lab reports, Sent list and activity, in the pages and the API; fetching for one clinic reads only its own FHIR server (`a4_*`, `j1_*`, `j2_*`). The demo runs two made-up clinics side by side.
 
-Each of the 38 acceptance criteria in [`docs/product/spec.md`](docs/product/spec.md) has tests named after it, and CI fails if a finished milestone's criterion has none passing ([the evidence pack](docs/evidence/m6.html)).
+Each of the 49 acceptance criteria in [`docs/product/spec.md`](docs/product/spec.md) has tests named after it, and CI fails if a finished milestone's criterion has none passing ([the evidence pack](docs/evidence/m6.html)).
 
 ## Try it
 
