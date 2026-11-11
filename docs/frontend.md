@@ -8,6 +8,22 @@ Status: `web/` created in M3 (2026-11-10) as a copy of Balanse's web shell, whic
 - **shadcn command line:** `pnpm dlx shadcn@4.22.1 … -c web`, the same pinned version as Kompleto.
 - **Browser tests** (`pnpm e2e`) run against a server with one clinic, its administrator and a physician; CI sets them up.
 
+## The look (M7, 2026-11-11)
+
+A lab's printed report sheet, read under clinic light: calm, ruled and exact. Its values live in `web/src/styles/globals.css`; components never set colours of their own. The patient's page (`src/web/patient.rs`) and the PDF follow the same rules.
+
+- **One accent:** a deep clinical teal, spent only on the primary action and the current place (the navigation's underline, the dot of "Ready to review"). Never on every row.
+- **One grey family:** warm greys, for the paper ground, the ink, rules and quiet text. Light only; there is no dark theme.
+- **Meaning colours:** amber for a value outside the lab's range and red for a blocked draft. Both always come with words, never colour alone.
+- **Type:** IBM Plex Sans (OFL, bundled from `@fontsource-variable/ibm-plex-sans`). Table headings are small, spaced capitals, as on a lab report. Every value uses tabular figures.
+- **One corner rule:** controls 6px, panels 8px, status pills fully round. The larger radius steps collapse onto the panel radius.
+- **Hierarchy by space and rules, not boxes:**
+  - a page has one white sheet for its main work (the queue, a report), with its actions in the sheet's footer;
+  - everything else is a plain section under a rule (`components/section.tsx`);
+  - no card inside a card.
+- **Status in words:** a small dot plus words (`components/status.tsx`), not a coloured pill on every row.
+- **The frame:** a letterhead across the top (the product, then the clinic and who is logged in) with the places beneath it. No sidebar.
+
 Before writing or reviewing React, read the skills in `.claude/skills/`:
 
 | Skill | Use it for |
