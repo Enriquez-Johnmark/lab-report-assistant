@@ -140,6 +140,11 @@ export function ActivityPage() {
 function fetchSummary(details: Record<string, unknown>) {
   if (typeof details.reason === "string") return details.reason
   const count = (key: string) => (typeof details[key] === "number" ? details[key] : 0)
-  const refused = Array.isArray(details.refused) ? details.refused.length : 0
+  const refused =
+    typeof details.refused_count === "number"
+      ? details.refused_count
+      : Array.isArray(details.refused)
+        ? details.refused.length
+        : 0
   return `${count("imported")} imported, ${count("skipped")} already here, ${refused} refused`
 }

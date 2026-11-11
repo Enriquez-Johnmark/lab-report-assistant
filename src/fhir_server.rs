@@ -48,7 +48,7 @@ impl ServerAddress {
     /// The address in `text`, if a FHIR server may live there.
     pub fn parse(text: &str) -> Result<Self, AddressError> {
         let url = Url::parse(text.trim()).map_err(|_| AddressError::NotAnAddress(text.to_owned()))?;
-        let on_this_computer = matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
+        let on_this_computer = is_this_computer(&url);
         match url.scheme() {
             "https" => {}
             "http" if on_this_computer => {}
@@ -67,7 +67,7 @@ impl ServerAddress {
 
     /// Whether the server is on this computer.
     pub fn is_on_this_computer(&self) -> bool {
-        Url::parse(&self.0).is_ok_and(|url| matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")))
+        Url::parse(&self.0).is_ok_and(|url| is_this_computer(&url))
     }
 }
 
@@ -134,6 +134,11 @@ pub async fn load_made_up(server: &ServerAddress) -> Result<usize, LoadError> {
         }
     }
     Ok(files.len())
+}
+
+/// Whether `url` names this computer: the one place that decides it.
+fn is_this_computer(url: &Url) -> bool {
+    matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
 }
 
 impl fmt::Display for ServerAddress {
@@ -219,6 +224,9 @@ pub enum FetchError {
     Database(#[from] sqlx::Error),
 }
 
+/// How many refused reports a fetch's audit entry names.
+const MAX_LOGGED_REFUSALS: usize = 20;
+
 /// Each clinic's FHIR server, and fetching its lab reports.
 pub struct FhirServers {
     pool: PgPool,
@@ -289,7 +297,18 @@ impl FhirServers {
         let server = self.get(clinic).await?.ok_or(FetchError::NoServer)?;
         let result = self.fetch_from(clinic, &server, actor).await;
         let (action, details) = match &result {
-            Ok(outcome) => ("fhir.fetched", json!(outcome)),
+            // The log keeps the counts and the first refusals: an append-only
+            // row shouldn't grow with a broken server's every report.
+            Ok(outcome) => (
+                "fhir.fetched",
+                json!({
+                    "server": outcome.server,
+                    "imported": outcome.imported,
+                    "skipped": outcome.skipped,
+                    "refused_count": outcome.refused.len(),
+                    "refused": outcome.refused.iter().take(MAX_LOGGED_REFUSALS).collect::<Vec<_>>(),
+                }),
+            ),
             Err(FetchError::Database(_)) => return result,
             Err(err) => (
                 "fhir.fetch_failed",
@@ -365,7 +384,8 @@ impl FhirServers {
                 let (Some(kind), Some(id)) = (resource["resourceType"].as_str(), resource["id"].as_str()) else {
                     continue;
                 };
-                if kind == "DiagnosticReport" {
+                // A report counts once, however often the server repeats it.
+                if kind == "DiagnosticReport" && !reports.iter().any(|known| known == id) {
                     reports.push(id.to_owned());
                 }
                 resources.insert(format!("{kind}/{id}"), resource.clone());

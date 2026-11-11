@@ -180,6 +180,28 @@ mod fetching {
     }
 
     #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
+    async fn i2_a_report_the_server_repeats_counts_once(pool: PgPool) {
+        let server = MockServer::start().await;
+        let second = format!("{}/fhir?page=2", server.uri());
+        Mock::given(method("GET"))
+            .and(path("/fhir/DiagnosticReport"))
+            .respond_with(fhir(&searchset(&[resources(1)], Some(&second))))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/fhir"))
+            .and(query_param("page", "2"))
+            .respond_with(fhir(&searchset(&[resources(1)], None)))
+            .mount(&server)
+            .await;
+        let (servers, clinic) = connected(&pool, &server).await;
+
+        let outcome = servers.fetch(clinic, "operator").await.unwrap();
+
+        assert_eq!((outcome.imported, outcome.skipped), (1, 0), "{outcome:?}");
+    }
+
+    #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
     async fn i3_a_report_the_reader_refuses_is_skipped_with_its_reason_and_the_others_import(pool: PgPool) {
         let mut broken = resources(2);
         for resource in &mut broken {
@@ -357,6 +379,9 @@ mod made_up_server {
     #[sqlx::test(migrator = "lab_report_assistant::MIGRATOR")]
     async fn fetching_from_hapi_fhir_imports_the_made_up_reports(pool: PgPool) {
         let Ok(url) = std::env::var("HAPI_FHIR_URL") else {
+            // CI always runs HAPI FHIR beside the tests: a missing server
+            // there is a broken setup, not a test to skip.
+            assert!(std::env::var("CI").is_err(), "HAPI_FHIR_URL must be set in CI");
             eprintln!("HAPI_FHIR_URL is not set: no HAPI FHIR server to fetch from");
             return;
         };
