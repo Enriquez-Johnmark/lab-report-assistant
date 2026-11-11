@@ -138,6 +138,7 @@ export function ReportsPage() {
                       <TableCell className="font-medium">
                         <Link
                           to={`/reports/${report.id}`}
+                          state={isSentView ? { from: "sent" } : undefined}
                           className="underline-offset-4 hover:underline"
                         >
                           {report.patient_name}

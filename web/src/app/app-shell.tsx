@@ -50,11 +50,14 @@ export function AppShell() {
 }
 
 function NavItemLink({ item }: { item: NavItem }) {
-  const { pathname } = useLocation()
+  const { pathname, state } = useLocation()
+  // A report belongs to the list it was opened from: Sent, or the queue.
+  const onReport = pathname.startsWith("/reports")
+  const fromSent = (state as { from?: string } | null)?.from === "sent"
   const isActive =
     item.to === "/"
-      ? pathname === "/" || pathname.startsWith("/reports")
-      : pathname.startsWith(item.to)
+      ? pathname === "/" || (onReport && !fromSent)
+      : pathname.startsWith(item.to) || (item.to === "/sent" && onReport && fromSent)
   return (
     <li>
       <NavLink
