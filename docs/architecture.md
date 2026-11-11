@@ -80,5 +80,5 @@ One milestone at a time, test first, each criterion's test named by its ID.
 | M7 | A clinical look: one accent, one grey family, a bundled sans and type scale, one corner rule, the review page as a report sheet, the patient's page as a letter | none | done (2026-11-11) |
 | M8 | Fetching from a FHIR server: the clinic's server address, "Fetch new lab reports", the fetch command, the fake server for tests and HAPI FHIR in CI | I1–I5 | done (2026-11-11) |
 | M9 | Several clinics: a second made-up clinic in the demo, side by side | J1, J2 | done (2026-11-11) |
-| M10 | PDF reports in the patient page's design | K1–K4 | planned |
+| M10 | PDF reports in the patient page's design | K1–K4 | done (2026-11-11) |
 | M11 | Version 2 showcase: README, screenshots, walkthrough video, portfolio page | none | planned |

@@ -50,6 +50,7 @@ A two-minute walkthrough is in [`docs/showcase/walkthrough.mp4`](docs/showcase/w
 - **No diagnosis or treatment:** a list of about 200 condition, drug and advice terms, matched as whole words, blocks a draft (`b6_*`); a value described on the wrong side of the lab's range blocks it too (`b5_*`).
 - **A physician approves the exact text:** only a physician may approve; the approval binds a hash of the text, and any change needs approving again (`c1_*` to `c7_*`).
 - **Sent once:** the notice goes through the engine's outbox; a crash mid-send never sends it twice (`d2_*`).
+- **The PDF is the approved text:** the patient (after "Show my report") and the physician (from Sent) can download the report as a PDF in the patient page's design. It's made on request from the same approved text and never stored, it's refused once that text no longer stands, and every download is logged (`k1_*` to `k4_*`).
 - **Every step is logged** in an append-only audit log the database refuses to change (`e1_*`, `e2_*`).
 - **Each clinic sees only its own data:** its lab reports, Sent list and activity, in the pages and the API; fetching for one clinic reads only its own FHIR server (`a4_*`, `j1_*`, `j2_*`). The demo runs two made-up clinics side by side.
 
